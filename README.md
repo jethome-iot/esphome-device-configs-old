@@ -51,14 +51,6 @@ that make up the device. Everything else lives under `packages/`, split by role:
 | `packages/features/` | SoC buses (`i2c.yaml`, `uarts.yaml`) and functionality — `temperature`, `rtc-time`, `vin-measure`, `modbus-server`, `display-off`, `ethernet`, `wifi`                                                                   |
 | `packages/display/`  | Display, pages, menu and buttons — `display.yaml`, `menu.yaml`, `buttons.yaml`, `menu-items-eth.yaml`, `menu-items-wifi.yaml`                                                                                           |
 
-Relays, digital inputs and temperature sensors are published as globals holding entity
-pointers (`relays`, `inputs`, `temperatures`), filled at boot. The status page iterates
-those vectors, so adding a sensor is a one-line change.
-
-Note that `!include` paths are relative to the file containing them, while asset paths
-(`font: file:`) are resolved against the directory of the device config — which is why
-`packages/display/display.yaml` refers to `fonts/` and not `../fonts/`.
-
 ### Generated configs (`dist/`)
 
 `dist/` is what the ESPHome Builder add-on imports; build and flash locally from the
