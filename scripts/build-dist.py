@@ -229,7 +229,9 @@ def main() -> int:
 
     if stale:
         names = ", ".join(str(path.relative_to(REPO_ROOT)) for path in stale)
-        print(f"\nout of date: {names}\nRun scripts/build-dist.py and commit the result.")
+        print(
+            f"\nout of date: {names}\nRun scripts/build-dist.py and commit the result."
+        )
         return 1
     if args.check:
         print("\ndist/ is up to date")
