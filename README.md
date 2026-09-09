@@ -91,7 +91,7 @@ than `'true'`, and a menu label that is not a boolean.
 
 ### Requirements
 
-- **Python 3.11 or higher**
+- **Python 3.12, 3.13 or 3.14** (ESPHome 2026.8.2 requires `>=3.12,<3.15`)
 - **ESPHome 2026.8.2** (pinned version for compatibility)
 - USB cable or serial adapter for initial flashing
 - Network connection for OTA updates

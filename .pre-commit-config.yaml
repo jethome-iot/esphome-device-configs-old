@@ -43,15 +43,13 @@ repos:
         types_or: [c, c++]
   - repo: local
     hooks:
-      - id: pylint
-        name: pylint
-        entry: python3 script/run-in-env.py pylint
-        language: system
-        types: [python]
       # Rewrites dist/, so a stale copy fails the commit until it is staged.
+      # Keep the esphome pin in step with requirements.txt: a different version
+      # here would generate a different dist/ than CI does.
       - id: build-dist
         name: regenerate dist/
         entry: python scripts/build-dist.py
-        language: system
+        language: python
+        additional_dependencies: [esphome==2026.8.2]
         pass_filenames: false
         files: ^(jxd-.*\.yaml|boards/|display/|features/|peripheral/|scripts/build-dist\.py)

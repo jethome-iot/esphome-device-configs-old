@@ -13,7 +13,7 @@ REM Check if Python is installed
 python --version >nul 2>&1
 if errorlevel 1 (
     echo ERROR: Python is not installed or not in PATH
-    echo Please install Python 3.11 or higher and try again
+    echo Please install Python 3.12 or newer and try again
     echo Download from: https://www.python.org/downloads/
     pause
     exit /b 1
@@ -29,22 +29,29 @@ for /f "tokens=1,2 delims=." %%a in ("!PYTHON_VERSION!") do (
     set PYTHON_MINOR=%%b
 )
 
-REM Check if Python version is 3.11 or higher
+REM ESPHome 2026.8.2 declares Requires-Python >=3.12,<3.15
 if !PYTHON_MAJOR! LSS 3 (
     echo.
-    echo ERROR: ESPHome requires Python 3.11 or higher
+    echo ERROR: ESPHome requires Python 3.12 or newer
     echo You have Python !PYTHON_VERSION!
     echo Please upgrade your Python installation and try again
     echo Download from: https://www.python.org/downloads/
     pause
     exit /b 1
 )
-if !PYTHON_MAJOR! EQU 3 if !PYTHON_MINOR! LSS 11 (
+if !PYTHON_MAJOR! EQU 3 if !PYTHON_MINOR! LSS 12 (
     echo.
-    echo ERROR: ESPHome requires Python 3.11 or higher
+    echo ERROR: ESPHome requires Python 3.12 or newer
     echo You have Python !PYTHON_VERSION!
     echo Please upgrade your Python installation and try again
     echo Download from: https://www.python.org/downloads/
+    pause
+    exit /b 1
+)
+if !PYTHON_MAJOR! EQU 3 if !PYTHON_MINOR! GEQ 15 (
+    echo.
+    echo ERROR: ESPHome does not support Python !PYTHON_VERSION! yet ^(needs ^< 3.15^)
+    echo Please use Python 3.12, 3.13 or 3.14
     pause
     exit /b 1
 )
@@ -81,6 +88,16 @@ python -m pip install --upgrade pip
 echo.
 echo Installing ESPHome from requirements.txt...
 pip install -r "%PROJECT_ROOT%requirements.txt"
+
+echo.
+echo Installing development tooling from requirements-dev.txt...
+pip install -r "%PROJECT_ROOT%requirements-dev.txt"
+
+echo.
+echo Installing the pre-commit hook...
+pushd "%PROJECT_ROOT%"
+pre-commit install
+popd
 
 echo.
 echo ===================================
