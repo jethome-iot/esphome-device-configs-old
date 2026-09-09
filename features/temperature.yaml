@@ -1,0 +1,16 @@
+# Adding a sensor: doc/ONEWIRE_WORKFLOW.md
+sensor:
+  - platform: dallas_temp
+    name: "Temp1"
+    id: temperature_sensor
+    update_interval: 20s
+
+globals:
+  - id: temperatures
+    type: std::vector<sensor::Sensor *>
+
+esphome:
+  on_boot:
+    - priority: 800
+      then:
+        - lambda: 'id(temperatures) = {id(temperature_sensor)};'

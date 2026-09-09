@@ -1,0 +1,117 @@
+globals:
+  - id: menu_at_root
+    type: bool
+    initial_value: 'true'
+
+graphical_display_menu:
+  id: display_menu
+  display: display1
+  font: f7x14_mod2
+  mode: joystick
+  active: false
+  on_enter:
+    - lambda: 'id(menu_at_root) = true;'
+  on_leave:
+    - lambda: 'id(menu_at_root) = false;'
+  on_redraw:
+    then:
+      - component.update: display1
+  items:
+    - type: menu
+      text: "Relays"
+      items:
+        - type: switch
+          text: "Relay 1"
+          switch: relay_1
+          immediate_edit: true
+
+        - type: switch
+          text: "Relay 2"
+          switch: relay_2
+          immediate_edit: true
+
+        - type: switch
+          text: "Relay 3"
+          switch: relay_3
+          immediate_edit: true
+
+        - type: switch
+          text: "Relay 4"
+          switch: relay_4
+          immediate_edit: true
+
+        - type: switch
+          text: "Relay 5"
+          switch: relay_5
+          immediate_edit: true
+
+        - type: switch
+          text: "Relay 6"
+          switch: relay_6
+          immediate_edit: true
+
+    - type: menu
+      text: "Inputs"
+      items:
+        - type: label
+          text: !lambda |-
+            return id(input_1).state ? "Input 1: ON" : "Input 1: OFF";
+
+        - type: label
+          text: !lambda |-
+            return id(input_2).state ? "Input 2: ON" : "Input 2: OFF";
+
+        - type: label
+          text: !lambda |-
+            return id(input_3).state ? "Input 3: ON" : "Input 3: OFF";
+
+        - type: label
+          text: !lambda |-
+            return id(input_4).state ? "Input 4: ON" : "Input 4: OFF";
+
+        - type: label
+          text: !lambda |-
+            return id(input_5).state ? "Input 5: ON" : "Input 5: OFF";
+
+        - type: label
+          text: !lambda |-
+            return id(input_6).state ? "Input 6: ON" : "Input 6: OFF";
+
+    - type: menu
+      text: "Temperatures"
+      items:
+        - type: label
+          text: !lambda |-
+            return str_sprintf("%s: %2.1f°C", id(temperature_sensor).get_name().c_str(),
+                               id(temperature_sensor).state);
+
+    - type: menu
+      text: "Info"
+      id: info_submenu
+      items:
+
+    - type: menu
+      text: "Settings"
+      id: menu_settings_id
+      items:
+        - type: select
+          text: "Display off"
+          select: display_off_timer_select
+
+        - type: menu
+          text: "Factory reset"
+          items:
+            - type: label
+              text: "Factory reset?"
+
+            - type: command
+              text: "Yes"
+              on_value:
+                - lambda: |-
+                    global_preferences->reset();
+                    App.safe_reboot();
+
+        - type: command
+          text: "Reboot device"
+          on_value:
+            - lambda: 'App.safe_reboot();'

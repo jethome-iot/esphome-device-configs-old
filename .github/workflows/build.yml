@@ -29,7 +29,7 @@ jobs:
       - name: List device configs
         id: list
         run: |
-          configs=$(find JXD E1 -maxdepth 1 -name '*.yaml' 2>/dev/null | sort |
+          configs=$(find . -maxdepth 1 -name '*.yaml' -not -name '.*' -printf '%P\n' | sort |
             jq -R -s -c 'split("\n") | map(select(length > 0))')
           echo "Found: $configs"
           if [ "$configs" = "[]" ]; then

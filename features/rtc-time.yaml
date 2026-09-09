@@ -1,0 +1,30 @@
+# Empty means the build machine's zone. Pin it with `-s timezone Europe/Berlin`
+# or here in this config. IANA names and POSIX TZ strings both work:
+# https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+substitutions:
+  timezone: ""
+
+# Last non-empty timezone wins: sntp compiles in the build machine's zone,
+# pcf8563 overrides it when ${timezone} is set.
+time:
+  - platform: sntp
+    id: sntp_time
+    servers:
+      - 0.pool.ntp.org
+      - 1.pool.ntp.org
+      - 2.pool.ntp.org
+    on_time_sync:
+      then:
+        pcf8563.write_time:
+
+  - platform: pcf8563
+    id: pcf8563_time
+    address: 0x51
+    timezone: ${timezone}
+    update_interval: 15min
+
+script:
+  - id: setup_time
+    then:
+      - pcf8563.read_time:
+          id: pcf8563_time
