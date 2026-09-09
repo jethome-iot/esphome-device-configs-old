@@ -196,7 +196,7 @@ The WiFi version supports easy configuration through a captive portal:
 1. **Flash the firmware** via USB using the WiFi configuration
 2. **Device creates Access Point**:
    - SSID: the `wifi_ap_ssid` value from your `secrets.yaml`
-   - Password: the `wifi_password_ssid` value from your `secrets.yaml`
+   - Password: the `wifi_ap_password` value from your `secrets.yaml`
    - The AP comes up 90 seconds after the device fails to reach a known network
 
 3. **Connect to the AP**:
@@ -242,7 +242,7 @@ esphome run jxd-r6-e1eth-lcd-wifi.yaml --device <IP_ADDRESS>
 
 The Access Point is configured from `secrets.yaml`, not derived from the device MAC:
 - **SSID**: value of `wifi_ap_ssid`
-- **Password**: value of `wifi_password_ssid` — WPA2, 8 to 64 characters, or an empty string for an open AP
+- **Password**: value of `wifi_ap_password` — WPA2, 8 to 64 characters, or an empty string for an open AP
 - **Timeout**: AP activates after 90 seconds without a WiFi connection (ESPHome's default)
 - **IP Address**: Device accessible at `192.168.4.1` when in AP mode
 
