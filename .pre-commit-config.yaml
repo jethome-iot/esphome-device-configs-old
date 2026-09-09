@@ -55,4 +55,4 @@ repos:
         language: python
         additional_dependencies: [esphome==2026.8.2]
         pass_filenames: false
-        files: ^(jxd-.*\.yaml|boards/|display/|features/|peripheral/|scripts/build-dist\.py)
+        files: ^(jxd-.*\.yaml|packages/|scripts/build-dist\.py)

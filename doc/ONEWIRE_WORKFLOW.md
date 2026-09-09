@@ -3,7 +3,7 @@
 Guide for adding Dallas DS18B20 temperature sensors to your device.
 
 The 1-Wire bus is driven by a DS2484 I²C-to-1-Wire bridge at address `0x18`
-(`boards/jxd-d6-r6-rev1.2.yaml`), so sensors are found on that bus rather than
+(`packages/boards/jxd-d6-r6-rev1.2.yaml`), so sensors are found on that bus rather than
 on a bit-banged GPIO.
 
 ## Step 1: Find Sensor Address
@@ -20,7 +20,7 @@ Copy the address: `0xeb01227905460228`
 
 ## Step 2: Add the Sensor
 
-Edit `features/temperature.yaml`:
+Edit `packages/features/temperature.yaml`:
 
 ```yaml
 sensor:
@@ -58,7 +58,7 @@ esphome:
 
 ## Step 4: Add to the Display Menu
 
-Edit `display/menu.yaml`, in the `Temperatures` submenu:
+Edit `packages/display/menu.yaml`, in the `Temperatures` submenu:
 
 ```yaml
     - type: menu

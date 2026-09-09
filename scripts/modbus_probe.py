@@ -2,7 +2,7 @@
 """Minimal Modbus RTU client for probing a JXD device over RS485.
 
 Speaks just enough Modbus to exercise the register map that
-`features/modbus-server.yaml` exposes. Needs only pyserial, which ESPHome
+`packages/features/modbus-server.yaml` exposes. Needs only pyserial, which ESPHome
 already pulls in, so `.venv/bin/python scripts/modbus_probe.py` works as is.
 
   .venv/bin/python scripts/modbus_probe.py --port /dev/ttyUSB2 probe
@@ -18,7 +18,7 @@ import time
 
 import serial
 
-# JXD bit map, see features/modbus-server.yaml. Coils and discrete inputs share
+# JXD bit map, see packages/features/modbus-server.yaml. Coils and discrete inputs share
 # one bit address space in upstream modbus_server, so the two blocks are disjoint.
 COILS_BASE = 0x0000  # relays, FC 0x01/0x05/0x0F
 DISCRETE_BASE = 0x0010  # digital inputs, FC 0x02

@@ -1,4 +1,4 @@
-# RS485 bus. Baud rate and pins: peripheral/uarts.yaml.
+# RS485 bus. Baud rate and pins: packages/features/uarts.yaml.
 modbus:
   - id: modbus_bus
     uart_id: jxm_uart2

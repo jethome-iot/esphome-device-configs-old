@@ -40,14 +40,13 @@ The JXD-R6-E1ETH-LCD is a powerful DIN-rail automation controller with the follo
 
 Device configurations live in the repository root (`jxd-r6-e1eth-lcd-eth.yaml`,
 `jxd-r6-e1eth-lcd-wifi.yaml`) and are thin: they set substitutions and list the packages
-that make up the device. Everything else lives in four directories, split by role:
+that make up the device. Everything else lives under `packages/`, split by role:
 
 | Directory | Contents |
 |---|---|
-| `boards/` | Platform and the chips sitting on each board — `jxd-cpu-e1eth.yaml` (ESP32, api/ota/logger/web_server, TMP102, LED, FN button) and `jxd-d6-r6-rev1.2.yaml` (PCA9554 expander, 6 relays, 6 inputs, DS2484 1-Wire bridge) |
-| `peripheral/` | SoC buses with this device's pins — `i2c.yaml`, `uarts.yaml` |
-| `features/` | Functionality — `temperature`, `rtc-time`, `vin-measure`, `modbus-server`, `display-off`, `ethernet`, `wifi` |
-| `display/` | Display, pages, menu and buttons — `display.yaml`, `menu.yaml`, `buttons.yaml`, `menu-items-eth.yaml`, `menu-items-wifi.yaml` |
+| `packages/boards/` | Platform and the chips sitting on each board — `jxd-cpu-e1eth.yaml` (ESP32, api/ota/logger/web_server, TMP102, LED, FN button) and `jxd-d6-r6-rev1.2.yaml` (PCA9554 expander, 6 relays, 6 inputs, DS2484 1-Wire bridge) |
+| `packages/features/` | SoC buses (`i2c.yaml`, `uarts.yaml`) and functionality — `temperature`, `rtc-time`, `vin-measure`, `modbus-server`, `display-off`, `ethernet`, `wifi` |
+| `packages/display/` | Display, pages, menu and buttons — `display.yaml`, `menu.yaml`, `buttons.yaml`, `menu-items-eth.yaml`, `menu-items-wifi.yaml` |
 
 Relays, digital inputs and temperature sensors are published as globals holding entity
 pointers (`relays`, `inputs`, `temperatures`), filled at boot. The status page iterates
@@ -55,7 +54,7 @@ those vectors, so adding a sensor is a one-line change.
 
 Note that `!include` paths are relative to the file containing them, while asset paths
 (`font: file:`) are resolved against the directory of the device config — which is why
-`display/display.yaml` refers to `fonts/` and not `../fonts/`.
+`packages/display/display.yaml` refers to `fonts/` and not `../fonts/`.
 
 ### Generated configs (`dist/`)
 
@@ -227,7 +226,7 @@ You can change WiFi configuration in two ways:
 4. Reconfigure WiFi using the captive portal (see Initial Setup above)
 
 **Method 2: Via Configuration File**
-1. Edit `features/wifi.yaml` to set default credentials
+1. Edit `packages/features/wifi.yaml` to set default credentials
 2. Recompile and upload firmware:
 ```bash
 esphome run jxd-r6-e1eth-lcd-wifi.yaml --device <IP_ADDRESS>
@@ -290,7 +289,7 @@ page. On the status page LEFT and RIGHT select a relay and CENTER toggles it.
 The device can act as a Modbus RTU server (slave) for integration with PLCs, SCADA systems, and other industrial automation equipment:
 
 - **Slave Address**: 0x01 (configurable)
-- **Baud Rate**: Configurable via UART settings (`peripheral/uarts.yaml`, `jxm_uart2`)
+- **Baud Rate**: Configurable via UART settings (`packages/features/uarts.yaml`, `jxm_uart2`)
 - **Coils** `0x0000`-`0x0005` (FC 0x01/0x05/0x0F): read/write relay 1-6
 - **Discrete Inputs** `0x0010`-`0x0015` (FC 0x02): read digital input 1-6
 - **Holding/input registers**: none mapped; a courtesy response answers `0` instead of an exception
@@ -304,7 +303,7 @@ the two blocks are placed at different offsets rather than both starting at zero
 - Pin 3: B
 - Pin 4: A
 
-The map is defined in `features/modbus-server.yaml`. `scripts/modbus_probe.py` walks the
+The map is defined in `packages/features/modbus-server.yaml`. `scripts/modbus_probe.py` walks the
 whole map over RS485 for a quick check:
 
 ```bash

@@ -4,23 +4,23 @@ substitutions:
   version: 1.0.0
 
 packages:
-  board: !include boards/jxd-cpu-e1eth.yaml
-  relay_board: !include boards/jxd-d6-r6-rev1.2.yaml
-  i2c: !include peripheral/i2c.yaml
-  uarts: !include peripheral/uarts.yaml
-  temperature: !include features/temperature.yaml
-  rtc_time: !include features/rtc-time.yaml
-  vin_measure: !include features/vin-measure.yaml
-  modbus: !include features/modbus-server.yaml
-  display_off: !include features/display-off.yaml
-  display: !include display/display.yaml
-  status_page: !include display/status-page.yaml
-  time_page: !include display/time-page.yaml
-  blank_page: !include display/blank-page.yaml
-  menu: !include display/menu.yaml
-  buttons: !include display/buttons.yaml
-  ethernet: !include features/ethernet.yaml
-  menu_items: !include display/menu-items-eth.yaml
+  board: !include packages/boards/jxd-cpu-e1eth.yaml
+  relay_board: !include packages/boards/jxd-d6-r6-rev1.2.yaml
+  i2c: !include packages/features/i2c.yaml
+  uarts: !include packages/features/uarts.yaml
+  temperature: !include packages/features/temperature.yaml
+  rtc_time: !include packages/features/rtc-time.yaml
+  vin_measure: !include packages/features/vin-measure.yaml
+  modbus: !include packages/features/modbus-server.yaml
+  display_off: !include packages/features/display-off.yaml
+  display: !include packages/display/display.yaml
+  status_page: !include packages/display/status-page.yaml
+  time_page: !include packages/display/time-page.yaml
+  blank_page: !include packages/display/blank-page.yaml
+  menu: !include packages/display/menu.yaml
+  buttons: !include packages/display/buttons.yaml
+  ethernet: !include packages/features/ethernet.yaml
+  menu_items: !include packages/display/menu-items-eth.yaml
 
 esphome:
   name: ${name}
