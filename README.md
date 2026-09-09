@@ -61,10 +61,14 @@ Note that `!include` paths are relative to the file containing them, while asset
 
 ### Generated configs (`dist/`)
 
-`dashboard_import` gives the ESPHome Builder a single YAML file, so neither the package
-tree nor the local `fonts/` reach the importing user. `scripts/build-dist.py` flattens
-each device config into `dist/<device>.yaml` with fonts pointed at raw URLs, taking the
-repository, ref and output path from that config's own `package_import_url`.
+`dist/` exists only for the ESPHome Builder add-on in Home Assistant: it is what
+`dashboard_import` serves to a device being adopted there. Build and flash from the device
+configs in the repository root instead — nothing in `dist/` is edited by hand.
+
+The Builder is handed a single YAML file and nothing else, so neither the package tree nor
+the local `fonts/` reach the importing user. `scripts/build-dist.py` flattens each device
+config into `dist/<device>.yaml` with fonts pointed at raw URLs, taking the repository,
+ref and output path from that config's own `package_import_url`.
 
 Regenerate and commit `dist/` after changing anything a device config pulls in — the
 pre-commit hook and CI both check it:
