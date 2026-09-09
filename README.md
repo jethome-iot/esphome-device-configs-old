@@ -88,6 +88,18 @@ scripts\setup.bat
 .venv\Scripts\activate
 ```
 
+3. **Create your secrets file**:
+```bash
+cp secrets.yaml.example secrets.yaml
+```
+
+`secrets.yaml` is gitignored and never leaves your machine; `secrets.yaml.example`
+is the tracked template listing every key the configs expect. Only the WiFi variant
+reads secrets — it needs the fallback access point's SSID and password. A missing
+file stops the build at `Error reading file secrets.yaml: [Errno 2] No such file or
+directory`; a file that is present but missing a key, at `Secret 'wifi_ap_ssid' not
+defined`. The Ethernet variant builds without a `secrets.yaml` at all.
+
 ### Configuration Variants
 
 The repository provides two configuration variants:
@@ -153,13 +165,12 @@ The WiFi version supports easy configuration through a captive portal:
 
 1. **Flash the firmware** via USB using the WiFi configuration
 2. **Device creates Access Point**:
-   - SSID: `JXD-R6-E1ETH-LCD-XXXX` (where XXXX is last 2 bytes of MAC address)
-   - Password: Last 4 bytes of MAC address (8 hex digits)
-   - Example: If MAC is `AA:BB:CC:DD:EE:FF`, SSID will be `JXD-R6-E1ETH-LCD-EEFF` with password `ccddeeff`
+   - SSID: the `wifi_ap_ssid` value from your `secrets.yaml`
+   - Password: the `wifi_password_ssid` value from your `secrets.yaml`
+   - The AP comes up 90 seconds after the device fails to reach a known network
 
 3. **Connect to the AP**:
    - Use your phone or laptop to connect to the device's WiFi network
-   - You can view the MAC address in the device display menu: **Menu → Info → MAC**
    
 4. **Configure WiFi**:
    - Your device will show a captive portal notification suggesting to open WiFi settings
@@ -199,10 +210,10 @@ esphome run jxd-r6-e1eth-lcd-wifi.yaml --device <IP_ADDRESS>
 
 #### WiFi AP Details
 
-The Access Point is automatically created using device MAC address:
-- **SSID Format**: `${friendly_name}-${MAC_SUFFIX}`
-- **Password Format**: Last 4 MAC bytes (8 hex characters)
-- **Timeout**: AP activates if no WiFi connection after 5 seconds
+The Access Point is configured from `secrets.yaml`, not derived from the device MAC:
+- **SSID**: value of `wifi_ap_ssid`
+- **Password**: value of `wifi_password_ssid` — WPA2, 8 to 64 characters, or an empty string for an open AP
+- **Timeout**: AP activates after 90 seconds without a WiFi connection (ESPHome's default)
 - **IP Address**: Device accessible at `192.168.4.1` when in AP mode
 
 ## Display UI Overview
