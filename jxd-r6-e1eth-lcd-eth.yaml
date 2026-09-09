@@ -35,11 +35,8 @@ esphome:
         - delay: 200ms
         - script.execute: setup_time
 
-http_request:
-
 ota:
-  - platform: http_request
-    id: ota_http_request
+  - platform: esphome
 
 dashboard_import:
   package_import_url: github://jethome-iot/esphome-device-configs/jxd-r6-e1eth-lcd-eth.yaml@refactor/simplify-configs
