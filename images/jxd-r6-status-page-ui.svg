@@ -12,10 +12,9 @@
     <text x="5" y="8" font-family="monospace" font-size="7" fill="#FFFFFF">Relays</text>
     
     <!-- Relay circles (showing 6 relays, first 3 ON, last 3 OFF) -->
-    <!-- Relay 1 - ON, selected (number drawn inverted) -->
+    <!-- Relay 1 - ON -->
     <circle cx="8" cy="19" r="4" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="0.5"/>
-    <rect x="5" y="21" width="7" height="9" fill="#FFFFFF"/>
-    <text x="6.5" y="28" font-family="monospace" font-size="5" fill="#000000">1</text>
+    <text x="6.5" y="28" font-family="monospace" font-size="5" fill="#FFFFFF">1</text>
     
     <!-- Relay 2 - ON -->
     <circle cx="23" cy="19" r="4" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="0.5"/>

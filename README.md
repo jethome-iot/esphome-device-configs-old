@@ -194,7 +194,8 @@ is provisioned through its captive portal. See [WiFi Setup](doc/WIFI_SETUP.md).
 
 ## Display UI Overview
 
-The device features an interactive OLED display with multiple pages accessible via the menu button:
+Four pages plus a menu. The main page is what you get at boot and after HOME; everything
+else is one button away from it.
 
 ### Main Page
 
@@ -202,25 +203,29 @@ The device features an interactive OLED display with multiple pages accessible v
 
 Shows device name, uptime, input voltage, and IP address.
 
+**Getting here**: HOME from anywhere, or BACK from another page.
+
 ### Status Page
 
 <img src="images/jxd-r6-status-page-ui.svg" width="400" alt="Status Page">
 
-Shows relay states, digital input states and temperature readings at a glance, and lets
-you switch the relays: LEFT and RIGHT move the highlight (the inverted relay number) along
-the relay row, CENTER toggles the highlighted relay.
+Relay states, digital input states and temperature readings at a glance, and it switches
+the relays: LEFT and RIGHT move the selection along the relay row — the selected number is
+drawn inverted on the device — and CENTER toggles that relay.
+
+**Getting here**: LEFT from the main page.
 
 ### Time Page
 
 <img src="images/jxd-r6-time-page-ui.svg" width="400" alt="Time Page">
 
-Displays current date and time from the hardware RTC.
+Current date and time from the hardware RTC.
 
-### Menu Navigation
+**Getting here**: RIGHT from the main page.
+
+### Menu
 
 <img src="images/jxd-r6-menu-ui.svg" width="400" alt="Menu">
-
-Interactive menu for relays, inputs, temperatures, device info and settings:
 
 - **Relays** - toggle each of the 6 relays
 - **Inputs** - live state of the 6 digital inputs
@@ -228,9 +233,26 @@ Interactive menu for relays, inputs, temperatures, device info and settings:
 - **Info** - network information (IP, MAC address)
 - **Settings** - display auto-off timer, WiFi credential reset (WiFi version only), factory reset, reboot
 
-Buttons: LEFT and RIGHT open the status and time pages from the main page, CENTER opens
-the menu, BACK steps out of a submenu and then closes the menu, HOME returns to the main
-page. On the status page LEFT and RIGHT select a relay and CENTER toggles it.
+**Getting here**: CENTER from the main page.
+
+### Blank Screen
+
+The display blanks after the inactivity timeout (**Settings → Display off**: 5, 10 or 15
+minutes, or never). Any button wakes it — LEFT lands on the status page, RIGHT on the time
+page, anything else on the main page.
+
+**Getting here**: BACK from the main page, or wait out the timer.
+
+### Buttons
+
+| Button      | Effect                                                                                    |
+| ----------- | ----------------------------------------------------------------------------------------- |
+| `HOME`      | Main page, from anywhere                                                                  |
+| `BACK`      | Main page; from the main page blanks the screen; in the menu goes up one level, then exits |
+| `LEFT`      | Main page → status page; on the status page selects the previous relay; adjusts menu values |
+| `RIGHT`     | Main page → time page; on the status page selects the next relay; adjusts menu values      |
+| `CENTER`    | Main page → menu; on the status page toggles the selected relay; in the menu enters        |
+| `UP` `DOWN` | Move through the menu                                                                      |
 
 ## Documentation
 
