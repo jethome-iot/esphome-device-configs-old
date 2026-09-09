@@ -12,6 +12,10 @@ venv/
 # Build directory
 .esphome
 
+# ESPHome drops a starter .gitignore next to any config it generates code for,
+# so running a compile against dist/ leaves one behind. dist/ is generated.
+/dist/.gitignore
+
 # Credentials
 secrets.yaml
 

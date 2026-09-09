@@ -36,5 +36,5 @@ esphome:
         - script.execute: setup_time
 
 dashboard_import:
-  package_import_url: github://jethome-iot/esphome-device-configs/jxd-r6-e1eth-lcd-wifi.yaml@refactor/simplify-configs
+  package_import_url: github://jethome-iot/esphome-device-configs/dist/jxd-r6-e1eth-lcd-wifi.yaml@refactor/simplify-configs
   import_full_config: true

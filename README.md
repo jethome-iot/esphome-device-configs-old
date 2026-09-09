@@ -57,6 +57,36 @@ Note that `!include` paths are relative to the file containing them, while asset
 (`font: file:`) are resolved against the directory of the device config — which is why
 `display/display.yaml` refers to `fonts/` and not `../fonts/`.
 
+### Generated configs (`dist/`)
+
+`dashboard_import` hands the ESPHome Builder one YAML file fetched from
+raw.githubusercontent, and nothing else. Neither of the two path rules above survives
+that: the package tree has no sibling files to resolve against on the importing machine,
+and `fonts/` is looked up in *that user's* config directory. So the tree that is pleasant
+to maintain and the file that is importable are two different artifacts.
+
+`scripts/build-dist.py` derives the second from the first, writing `dist/<device>.yaml`:
+
+- packages are merged in, but substitutions are deliberately left symbolic, so the
+  Builder's rename-on-import still reaches `${friendly_name}` inside the display lambda;
+- every `file:` that names a repository file is rewritten to a raw.githubusercontent URL,
+  which the font component downloads and caches like any other web font.
+
+The repository, ref and output path all come from the source config's own
+`package_import_url`, so that URL is the only place the branch is named. Regenerate and
+commit `dist/` after changing anything a device config pulls in:
+
+```bash
+python scripts/build-dist.py           # regenerate
+python scripts/build-dist.py --check   # fail if stale (CI runs this)
+```
+
+The generator also refuses to emit a file the Builder would corrupt. To rename a device,
+`dashboard_import` round-trips the YAML through ruamel, which parses as YAML 1.2 and drops
+quotes that only matter in YAML 1.1 — a quoted `'Yes'` comes back bare and ESPHome then
+reads it as the boolean `true`. Spell such values so both versions agree: `'1'` rather
+than `'true'`, and a menu label that is not a boolean.
+
 ## Quick Start
 
 ### Requirements

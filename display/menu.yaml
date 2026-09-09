@@ -105,7 +105,7 @@ graphical_display_menu:
               text: "Factory reset?"
 
             - type: command
-              text: "Yes"
+              text: "Confirm"
               on_value:
                 - lambda: |-
                     global_preferences->reset();

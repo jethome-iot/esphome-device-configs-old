@@ -71,3 +71,23 @@ jobs:
 
       - name: Compile
         run: esphome compile "${{ matrix.config }}"
+
+  dist:
+    name: Check dist/ is current
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install ESPHome
+        run: pip install -r requirements.txt
+
+      # dist/ is generated and committed; a stale copy would be served to the
+      # ESPHome Builder long after the source configs moved on.
+      - name: Verify generated configs
+        run: python scripts/build-dist.py --check

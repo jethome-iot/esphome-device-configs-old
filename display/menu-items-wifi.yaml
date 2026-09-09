@@ -28,9 +28,9 @@ graphical_display_menu:
               text: "Reset?"
 
             - type: command
-              text: "Yes"
+              text: "Confirm"
               id: wifi_reset_yes
               on_value:
-                - lambda: 'id(wifi_reset_yes)->set_text("Yes - OK");'
+                - lambda: 'id(wifi_reset_yes)->set_text("Confirm - OK");'
                 - delay: 1s
                 - script.execute: reset_wifi
