@@ -187,84 +187,10 @@ Subsequent updates can be done over-the-air (OTA):
 esphome run jxd-r6-e1eth-lcd-eth.yaml --device <IP_ADDRESS>
 ```
 
-### WiFi Setup (WiFi Version Only)
+### WiFi Setup (WiFi version only)
 
-The WiFi version supports easy configuration through a captive portal:
-
-#### Initial Setup
-
-1. **Flash the firmware** via USB using the WiFi configuration
-
-2. **Device creates Access Point**:
-   
-   - SSID: the `wifi_ap_ssid` value from your `secrets.yaml`
-   
-   - Password: the `wifi_ap_password` value from your `secrets.yaml`
-   
-   - The AP comes up 90 seconds after the device fails to reach a known network
-
-3. **Connect to the AP**:
-   
-   - Use your phone or laptop to connect to the device's WiFi network
-
-4. **Configure WiFi**:
-   
-   - Your device will show a captive portal notification suggesting to open WiFi settings
-   
-   - Tap the notification or manually navigate to `http://192.168.4.1`
-   
-   - The captive portal will display a list of available WiFi networks
-   
-   - Select your WiFi network from the list
-   
-   - Enter your WiFi password
-   
-   - Click "Save"
-
-5. **Device connects**:
-   
-   - Device will disconnect from AP mode
-   
-   - Connects to your WiFi network
-   
-   - IP address displayed on device screen
-   
-   - Device now accessible via Home Assistant and web interface
-
-#### Changing WiFi Settings
-
-You can change WiFi configuration in two ways:
-
-**Method 1: Via Display Menu (WiFi version)**
-
-1. Press the Menu button to open the display menu
-2. Navigate to: **Settings → Reset WiFi creds → Yes**
-3. Device clears stored WiFi credentials and reboots in AP mode
-4. Reconfigure WiFi using the captive portal (see Initial Setup above)
-
-**Method 2: Via Configuration File**
-
-1. Edit `packages/features/wifi.yaml` to set default credentials
-2. Recompile and upload firmware:
-   
-   ```bash
-   esphome run jxd-r6-e1eth-lcd-wifi.yaml --device <IP_ADDRESS>
-   ```
-
-**Method 3: Factory Reset**
-
-1. Open display menu: **Settings → Factory reset → Yes**
-2. This clears all stored data including WiFi credentials
-3. Device reboots and creates AP for reconfiguration
-
-#### WiFi AP Details
-
-The Access Point is configured from `secrets.yaml`, not derived from the device MAC:
-
-- **SSID**: value of `wifi_ap_ssid`
-- **Password**: value of `wifi_ap_password` — WPA2, 8 to 64 characters, or an empty string for an open AP
-- **Timeout**: AP activates after 90 seconds without a WiFi connection (ESPHome's default)
-- **IP Address**: Device accessible at `192.168.4.1` when in AP mode
+The WiFi variant ships without network credentials: it raises a fallback access point and
+is provisioned through its captive portal. See [WiFi Setup](doc/WIFI_SETUP.md).
 
 ## Display UI Overview
 
@@ -309,6 +235,7 @@ page. On the status page LEFT and RIGHT select a relay and CENTER toggles it.
 ## Documentation
 
 - **[OneWire Workflow Guide](doc/ONEWIRE_WORKFLOW.md)**: Step-by-step guide for adding Dallas DS18B20 temperature sensors
+- **[WiFi Setup](doc/WIFI_SETUP.md)**: Provisioning the WiFi variant through its captive portal
 
 ## Modbus RTU Server
 
