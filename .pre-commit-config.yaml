@@ -48,3 +48,10 @@ repos:
         entry: python3 script/run-in-env.py pylint
         language: system
         types: [python]
+      # Rewrites dist/, so a stale copy fails the commit until it is staged.
+      - id: build-dist
+        name: regenerate dist/
+        entry: python scripts/build-dist.py
+        language: system
+        pass_filenames: false
+        files: ^(jxd-.*\.yaml|boards/|display/|features/|peripheral/|scripts/build-dist\.py)
