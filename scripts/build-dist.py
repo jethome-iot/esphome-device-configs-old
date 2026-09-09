@@ -12,6 +12,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+from functools import cache
 import io
 from pathlib import Path
 import sys
@@ -23,6 +24,7 @@ from esphome.components.packages import do_packages_pass, merge_packages
 from esphome.core import CORE
 from esphome.git import GitFile
 from ruamel.yaml import YAML
+import yaml
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -78,6 +80,46 @@ def rewrite_assets(node: Any, raw_base: str, rewritten: list[str]) -> None:
     elif isinstance(node, list):
         for item in node:
             rewrite_assets(item, raw_base, rewritten)
+
+
+class BlockStr(str):
+    """String emitted as a literal block scalar, which no YAML version resolves."""
+
+
+@cache
+def needs_block_style(value: str) -> bool:
+    """Whether a YAML 1.2 round-trip would leave this bare for 1.1 to misread.
+
+    dashboard_import re-emits the file with ruamel, which quotes only what YAML 1.2
+    would resolve; ESPHome then reads the result as YAML 1.1, which resolves more —
+    `Yes` as a boolean, `12:30` as 750.
+    """
+    try:
+        buffer = io.StringIO()
+        YAML().dump({"v": value}, buffer)
+        return not isinstance(yaml.safe_load(buffer.getvalue())["v"], str)
+    except Exception:
+        return False
+
+
+def _represent_block(dumper: Any, value: BlockStr) -> Any:
+    return dumper.represent_scalar("tag:yaml.org,2002:str", str(value), style="|")
+
+
+# Exact-type representers win over the multi-representer ESPHome registers for str.
+yaml_util.ESPHomeDumper.add_representer(BlockStr, _represent_block)
+
+
+def harden_scalars(node: Any) -> Any:
+    """Wrap values a YAML 1.2 round-trip would hand back as non-strings."""
+    if isinstance(node, dict):
+        return {key: harden_scalars(value) for key, value in node.items()}
+    if isinstance(node, list):
+        return [harden_scalars(value) for value in node]
+    if isinstance(node, str) and not isinstance(node, BlockStr):
+        if needs_block_style(str(node)):
+            return BlockStr(node)
+    return node
 
 
 def find_local_paths(node: Any, path: str = "") -> list[str]:
@@ -152,9 +194,8 @@ def verify_import_roundtrip(source: Path, text: str) -> None:
     if problems:
         listed = "\n".join(f"    {problem}" for problem in sorted(problems))
         raise SystemExit(
-            f"{source.name}: dashboard_import would corrupt these values:\n{listed}\n"
-            f"  Spell them so YAML 1.1 and 1.2 agree — '1' rather than 'true', and a "
-            f"label that is not a boolean."
+            f"{source.name}: dashboard_import would corrupt these values, and "
+            f"harden_scalars() could not save them:\n{listed}"
         )
 
 
@@ -197,7 +238,7 @@ def render(source: Path) -> tuple[Path, str] | None:
 
     print(f"  {source.name}: {len(rewritten)} asset(s) -> {raw_base}")
 
-    body = yaml_util.dump(config)
+    body = yaml_util.dump(harden_scalars(config))
     verify_import_roundtrip(source, body)
     return target, HEADER.format(source=source.name) + "\n" + body
 
