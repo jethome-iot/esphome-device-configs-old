@@ -23,10 +23,6 @@ preferences:
 
 logger:
   level: debug
-  # logs:
-  #   esp-idf: INFO
-  #   wifi: INFO
-  #   sensor: INFO
 
 web_server:
   port: 80
