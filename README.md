@@ -2,14 +2,16 @@
 
 ![ESPHome](https://img.shields.io/badge/ESPHome-2026.8.2-blue)
 
-This repository contains ESPHome configurations for various automation devices. Everything is built from upstream ESPHome components — no forked or custom components are required. These are **open-source firmware configurations** that you can customize and build yourself.
+This repository contains ESPHome configurations for various automation devices. These are **open-source firmware configurations** that you can customize and build yourself.
 
 ## Supported Devices
 
 ### JXD-R6-E1ETH-LCD
+
 JetHome DIN-rail automation controller with display. For a proprietary firmware version with additional features and support, visit [JetHome official website](https://jethome.com/).
 
 **Configurations**:
+
 - `jxd-r6-e1eth-lcd-eth.yaml` - Ethernet variant
 - `jxd-r6-e1eth-lcd-wifi.yaml` - WiFi variant
 
@@ -18,6 +20,7 @@ JetHome DIN-rail automation controller with display. For a proprietary firmware 
 The JXD-R6-E1ETH-LCD is a powerful DIN-rail automation controller with the following capabilities:
 
 ### Hardware
+
 - **ESP32** microcontroller with 16MB flash and PSRAM
 - **6 Relay outputs** via PCA9554 I/O expander
 - **6 Digital inputs** via PCA9554 I/O expander
@@ -42,11 +45,11 @@ Device configurations live in the repository root (`jxd-r6-e1eth-lcd-eth.yaml`,
 `jxd-r6-e1eth-lcd-wifi.yaml`) and are thin: they set substitutions and list the packages
 that make up the device. Everything else lives under `packages/`, split by role:
 
-| Directory | Contents |
-|---|---|
-| `packages/boards/` | Platform and the chips sitting on each board — `jxd-cpu-e1eth.yaml` (ESP32, api/ota/logger/web_server, TMP102, LED, FN button) and `jxd-d6-r6-rev1.2.yaml` (PCA9554 expander, 6 relays, 6 inputs, DS2484 1-Wire bridge) |
-| `packages/features/` | SoC buses (`i2c.yaml`, `uarts.yaml`) and functionality — `temperature`, `rtc-time`, `vin-measure`, `modbus-server`, `display-off`, `ethernet`, `wifi` |
-| `packages/display/` | Display, pages, menu and buttons — `display.yaml`, `menu.yaml`, `buttons.yaml`, `menu-items-eth.yaml`, `menu-items-wifi.yaml` |
+| Directory            | Contents                                                                                                                                                                                                               |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/boards/`   | Platform and the chips sitting on each board — `jxd-cpu-e1eth.yaml` (ESP32, api/ota/logger/web_server, TMP102, LED, FN button) and `jxd-d6-r6-rev1.2.yaml` (PCA9554 expander, 6 relays, 6 inputs, DS2484 1-Wire bridge) |
+| `packages/features/` | SoC buses (`i2c.yaml`, `uarts.yaml`) and functionality — `temperature`, `rtc-time`, `vin-measure`, `modbus-server`, `display-off`, `ethernet`, `wifi`                                                                   |
+| `packages/display/`  | Display, pages, menu and buttons — `display.yaml`, `menu.yaml`, `buttons.yaml`, `menu-items-eth.yaml`, `menu-items-wifi.yaml`                                                                                           |
 
 Relays, digital inputs and temperature sensors are published as globals holding entity
 pointers (`relays`, `inputs`, `temperatures`), filled at boot. The status page iterates
@@ -86,29 +89,33 @@ The generator refuses values the Builder would corrupt on import, such as a quot
 ### Installation
 
 1. **Clone this repository**:
-```bash
-git clone <repository-url>
-cd esphome-device-configs
-```
+   
+   ```bash
+   git clone <repository-url>
+   cd esphome-device-configs
+   ```
 
 2. **Set up Python environment**:
 
 **Linux/macOS**:
+
 ```bash
 ./scripts/setup.sh
 source .venv/bin/activate
 ```
 
 **Windows**:
+
 ```cmd
 scripts\setup.bat
 .venv\Scripts\activate
 ```
 
 3. **Create your secrets file**:
-```bash
-cp secrets.yaml.example secrets.yaml
-```
+   
+   ```bash
+   cp secrets.yaml.example secrets.yaml
+   ```
 
 `secrets.yaml` is gitignored and never leaves your machine; `secrets.yaml.example`
 is the tracked template listing every key the configs expect. Only the WiFi variant
@@ -122,17 +129,21 @@ defined`. The Ethernet variant builds without a `secrets.yaml` at all.
 The repository provides two configuration variants:
 
 #### Ethernet Version
+
 ```bash
 esphome run jxd-r6-e1eth-lcd-eth.yaml
 ```
+
 - Uses LAN8720 Ethernet controller
 - Static or DHCP IP configuration
 - Best for industrial/stable installations
 
 #### WiFi Version
+
 ```bash
 esphome run jxd-r6-e1eth-lcd-wifi.yaml
 ```
+
 - Uses ESP32 built-in WiFi
 - Captive portal for easy setup
 - WiFi credentials stored in device
@@ -163,6 +174,7 @@ are accepted. POSIX strings per zone: [posix_tz_db](https://github.com/nayarsyst
 ### First Flash
 
 For the first flash, connect via USB:
+
 ```bash
 esphome run jxd-r6-e1eth-lcd-eth.yaml
 # or
@@ -170,6 +182,7 @@ esphome run jxd-r6-e1eth-lcd-wifi.yaml
 ```
 
 Subsequent updates can be done over-the-air (OTA):
+
 ```bash
 esphome run jxd-r6-e1eth-lcd-eth.yaml --device <IP_ADDRESS>
 ```
@@ -181,26 +194,41 @@ The WiFi version supports easy configuration through a captive portal:
 #### Initial Setup
 
 1. **Flash the firmware** via USB using the WiFi configuration
+
 2. **Device creates Access Point**:
+   
    - SSID: the `wifi_ap_ssid` value from your `secrets.yaml`
+   
    - Password: the `wifi_ap_password` value from your `secrets.yaml`
+   
    - The AP comes up 90 seconds after the device fails to reach a known network
 
 3. **Connect to the AP**:
-   - Use your phone or laptop to connect to the device's WiFi network
    
+   - Use your phone or laptop to connect to the device's WiFi network
+
 4. **Configure WiFi**:
+   
    - Your device will show a captive portal notification suggesting to open WiFi settings
+   
    - Tap the notification or manually navigate to `http://192.168.4.1`
+   
    - The captive portal will display a list of available WiFi networks
+   
    - Select your WiFi network from the list
+   
    - Enter your WiFi password
+   
    - Click "Save"
 
 5. **Device connects**:
+   
    - Device will disconnect from AP mode
+   
    - Connects to your WiFi network
+   
    - IP address displayed on device screen
+   
    - Device now accessible via Home Assistant and web interface
 
 #### Changing WiFi Settings
@@ -208,19 +236,23 @@ The WiFi version supports easy configuration through a captive portal:
 You can change WiFi configuration in two ways:
 
 **Method 1: Via Display Menu (WiFi version)**
+
 1. Press the Menu button to open the display menu
 2. Navigate to: **Settings → Reset WiFi creds → Yes**
 3. Device clears stored WiFi credentials and reboots in AP mode
 4. Reconfigure WiFi using the captive portal (see Initial Setup above)
 
 **Method 2: Via Configuration File**
+
 1. Edit `packages/features/wifi.yaml` to set default credentials
 2. Recompile and upload firmware:
-```bash
-esphome run jxd-r6-e1eth-lcd-wifi.yaml --device <IP_ADDRESS>
-```
+   
+   ```bash
+   esphome run jxd-r6-e1eth-lcd-wifi.yaml --device <IP_ADDRESS>
+   ```
 
 **Method 3: Factory Reset**
+
 1. Open display menu: **Settings → Factory reset → Yes**
 2. This clears all stored data including WiFi credentials
 3. Device reboots and creates AP for reconfiguration
@@ -228,6 +260,7 @@ esphome run jxd-r6-e1eth-lcd-wifi.yaml --device <IP_ADDRESS>
 #### WiFi AP Details
 
 The Access Point is configured from `secrets.yaml`, not derived from the device MAC:
+
 - **SSID**: value of `wifi_ap_ssid`
 - **Password**: value of `wifi_ap_password` — WPA2, 8 to 64 characters, or an empty string for an open AP
 - **Timeout**: AP activates after 90 seconds without a WiFi connection (ESPHome's default)
@@ -238,11 +271,13 @@ The Access Point is configured from `secrets.yaml`, not derived from the device 
 The device features an interactive OLED display with multiple pages accessible via the menu button:
 
 ### Main Page
+
 <img src="images/jxd-r6-main-page-ui.svg" width="400" alt="Main Page">
 
 Shows device name, uptime, input voltage, and IP address.
 
 ### Status Page
+
 <img src="images/jxd-r6-status-page-ui.svg" width="400" alt="Status Page">
 
 Shows relay states, digital input states and temperature readings at a glance, and lets
@@ -250,14 +285,17 @@ you switch the relays: LEFT and RIGHT move the highlight (the inverted relay num
 the relay row, CENTER toggles the highlighted relay.
 
 ### Time Page
+
 <img src="images/jxd-r6-time-page-ui.svg" width="400" alt="Time Page">
 
 Displays current date and time from the hardware RTC.
 
 ### Menu Navigation
+
 <img src="images/jxd-r6-menu-ui.svg" width="400" alt="Menu">
 
 Interactive menu for relays, inputs, temperatures, device info and settings:
+
 - **Relays** - toggle each of the 6 relays
 - **Inputs** - live state of the 6 digital inputs
 - **Temperatures** - temperature sensor readings
@@ -286,6 +324,7 @@ Upstream `modbus_server` keeps coils and discrete inputs in a single bit address
 the two blocks are placed at different offsets rather than both starting at zero.
 
 **RS-485 Connector (JXM2)**:
+
 - Pin 1: B
 - Pin 2: A
 - Pin 3: B
@@ -315,6 +354,6 @@ This project is open-source.
 ## Support
 
 For issues related to:
+
 - **Open-source firmware**: Use GitHub issues in this repository
 - **Hardware or proprietary firmware**: Contact [JetHome support](mailto:sales@jethome.com)
-
