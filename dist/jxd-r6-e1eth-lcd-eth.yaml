@@ -1062,7 +1062,10 @@ graphical_display_menu:
               text: Factory reset?
             - type: command
               text: Confirm
+              id: factory_reset_yes
               on_value:
+                - lambda: id(factory_reset_yes)->set_text("Confirm - OK");
+                - delay: 1s
                 - lambda: 'global_preferences->reset();
 
                     App.safe_reboot();'
