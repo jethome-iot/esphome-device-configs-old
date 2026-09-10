@@ -64,6 +64,10 @@ python scripts/build-dist.py           # regenerate
 python scripts/build-dist.py --check   # fail if stale (pre-commit and CI run this)
 ```
 
+`!secret` references are carried into `dist/` rather than resolved, so nothing leaks —
+but importing the WiFi variant means supplying `wifi_ap_ssid` and `wifi_ap_password`
+in Home Assistant's own `secrets.yaml`.
+
 ## Quick Start
 
 ### Requirements
