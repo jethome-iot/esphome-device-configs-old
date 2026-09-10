@@ -27,7 +27,7 @@ EXCEPTIONS = {
     0x01: "ILLEGAL_FUNCTION",
     0x02: "ILLEGAL_DATA_ADDRESS",
     0x03: "ILLEGAL_DATA_VALUE",
-    0x04: "SERVICE_DEVICE_FAILURE",
+    0x04: "SERVER_DEVICE_FAILURE",
     0x05: "ACKNOWLEDGE",
     0x06: "SERVER_DEVICE_BUSY",
     0x08: "MEMORY_PARITY_ERROR",
@@ -257,7 +257,7 @@ def main() -> int:
     p.add_argument("value", type=auto_int)
 
     p = sub.add_parser(
-        "write-coils", help="FC 0x0F, e.g. write-coils 0xA000 1 0 1 0 1 0"
+        "write-coils", help="FC 0x0F, e.g. write-coils 0x0000 1 0 1 0 1 0"
     )
     p.add_argument("address", type=auto_int)
     p.add_argument("values", type=auto_int, nargs="+")
