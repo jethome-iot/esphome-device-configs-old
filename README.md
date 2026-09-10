@@ -76,30 +76,28 @@ python scripts/build-dist.py --check   # fail if stale (pre-commit and CI run th
 ### Installation
 
 1. **Clone this repository**:
-   
+
    ```bash
    git clone <repository-url>
    cd esphome-device-configs
    ```
 
-2. **Set up Python environment**:
+2. **Set up the Python environment.** Linux/macOS:
 
-**Linux/macOS**:
+   ```bash
+   ./scripts/setup.sh
+   source .venv/bin/activate
+   ```
 
-```bash
-./scripts/setup.sh
-source .venv/bin/activate
-```
+   Windows:
 
-**Windows**:
-
-```cmd
-scripts\setup.bat
-.venv\Scripts\activate
-```
+   ```cmd
+   scripts\setup.bat
+   .venv\Scripts\activate
+   ```
 
 3. **Create your secrets file**:
-   
+
    ```bash
    cp secrets.yaml.example secrets.yaml
    ```
