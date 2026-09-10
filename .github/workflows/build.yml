@@ -69,6 +69,11 @@ jobs:
           key: toolchains-${{ hashFiles('requirements.txt') }}
           restore-keys: toolchains-
 
+      # The WiFi config reads !secret and secrets.yaml is gitignored; the
+      # template's fallback AP values only need to be syntactically valid.
+      - name: Seed secrets.yaml
+        run: cp secrets.yaml.example secrets.yaml
+
       - name: Compile
         run: esphome compile "${{ matrix.config }}"
 
@@ -86,6 +91,11 @@ jobs:
 
       - name: Install ESPHome
         run: pip install -r requirements.txt
+
+      # The WiFi config reads !secret and secrets.yaml is gitignored; the
+      # template's fallback AP values only need to be syntactically valid.
+      - name: Seed secrets.yaml
+        run: cp secrets.yaml.example secrets.yaml
 
       # dist/ is generated and committed; a stale copy would be served to the
       # ESPHome Builder long after the source configs moved on.

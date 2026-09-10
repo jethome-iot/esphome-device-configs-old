@@ -52,8 +52,17 @@ def flatten(path: Path) -> dict[str, Any]:
     """
     CORE.reset()
     CORE.config_path = path
-    config = yaml_util.load_yaml(path)
-    config = do_packages_pass(config, command_line_substitutions=None)
+    try:
+        config = yaml_util.load_yaml(path)
+        config = do_packages_pass(config, command_line_substitutions=None)
+    except Exception as err:
+        # The WiFi config reads !secret, and a traceback buries that.
+        if not (REPO_ROOT / "secrets.yaml").is_file():
+            raise SystemExit(
+                f"{path.name}: {err}\n"
+                "  No secrets.yaml: copy secrets.yaml.example to secrets.yaml."
+            ) from err
+        raise
     return merge_packages(config)
 
 
