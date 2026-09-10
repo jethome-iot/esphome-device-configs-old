@@ -725,17 +725,19 @@ display:
           it.print(0, 32, id(f5x7), \"Inputs\");\nx = x_start;\nint num = 1;\nfor\
           \ (auto *input : id(inputs)) {\n  if (input->state) {\n    it.filled_circle(x,\
           \ 47, radius);\n  } else {\n    it.circle(x, 47, radius);\n  }\n  it.printf(x\
-          \ - 2, 54, id(f5x7), \"%d\", num++);\n  x += x_spacing;\n}\n\n// Bound sensors\
-          \ only, three rows; UP/DOWN scroll.\nconst int rows = 3;\nint bound = 0;\n\
-          for (auto *sensor : id(temperatures))\n  bound += sensor->has_state();\n\
-          int &scroll = id(status_temp_scroll);\nscroll = std::clamp(scroll, 0, std::max(bound\
-          \ - rows, 0));\n\nit.print(92, 0, id(f5x7), \"Temp\");\nif (scroll > 0)\n\
-          \  it.filled_triangle(117, 6, 121, 6, 119, 2);\nif (scroll + rows < bound)\n\
-          \  it.filled_triangle(123, 2, 127, 2, 125, 6);\n\nint y = 11;\nint skip\
-          \ = scroll;\nint shown = 0;\nfor (auto *sensor : id(temperatures)) {\n \
-          \ if (!sensor->has_state() || skip-- > 0)\n    continue;\n  if (shown++\
-          \ == rows)\n    break;\n  it.printf(92, y, id(f5x7), \"%.7s\", sensor->get_name().c_str());\n\
-          \  y += 8;\n  if (std::isnan(sensor->state)) {\n    it.print(92, y, id(f5x7),\
+          \ - 2, 54, id(f5x7), \"%d\", num++);\n  x += x_spacing;\n}\n\n// Bound slots\
+          \ only, three rows; UP/DOWN scroll.\nconst int rows = 3;\nauto &slots =\
+          \ id(dallas_slots);\nconst size_t count = std::min(id(temperatures).size(),\
+          \ std::size(slots));\nint bound = 0;\nfor (size_t i = 0; i < count; i++)\n\
+          \  bound += slots[i] != 0;\nint &scroll = id(status_temp_scroll);\nscroll\
+          \ = std::clamp(scroll, 0, std::max(bound - rows, 0));\n\nit.print(92, 0,\
+          \ id(f5x7), \"Temp\");\nif (scroll > 0)\n  it.filled_triangle(117, 6, 121,\
+          \ 6, 119, 2);\nif (scroll + rows < bound)\n  it.filled_triangle(123, 2,\
+          \ 127, 2, 125, 6);\n\nint y = 11;\nint skip = scroll;\nint shown = 0;\n\
+          for (size_t i = 0; i < count; i++) {\n  if (slots[i] == 0 || skip-- > 0)\n\
+          \    continue;\n  if (shown++ == rows)\n    break;\n  auto *sensor = id(temperatures)[i];\n\
+          \  it.printf(92, y, id(f5x7), \"%.7s\", sensor->get_name().c_str());\n \
+          \ y += 8;\n  if (std::isnan(sensor->state)) {\n    it.print(92, y, id(f5x7),\
           \ \"--.-\");\n  } else {\n    it.printf(92, y, id(f5x7), \"%.1f\", sensor->state);\n\
           \  }\n  y += 11;\n}"
   - platform: ssd1306_i2c
