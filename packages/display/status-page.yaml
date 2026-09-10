@@ -4,6 +4,11 @@ globals:
     type: int
     initial_value: '0'
 
+  # First temperature row shown; UP/DOWN move it.
+  - id: status_temp_scroll
+    type: int
+    initial_value: '0'
+
 display:
   - platform: ssd1306_i2c
     id: !extend display1
@@ -45,15 +50,34 @@ display:
             x += x_spacing;
           }
 
+          // Bound sensors only, three rows; UP/DOWN scroll.
+          const int rows = 3;
+          int bound = 0;
+          for (auto *sensor : id(temperatures))
+            bound += sensor->has_state();
+          int &scroll = id(status_temp_scroll);
+          scroll = std::clamp(scroll, 0, std::max(bound - rows, 0));
+
           it.print(92, 0, id(f5x7), "Temp");
+          if (scroll > 0)
+            it.filled_triangle(117, 6, 121, 6, 119, 2);
+          if (scroll + rows < bound)
+            it.filled_triangle(123, 2, 127, 2, 125, 6);
+
           int y = 11;
+          int skip = scroll;
+          int shown = 0;
           for (auto *sensor : id(temperatures)) {
+            if (!sensor->has_state() || skip-- > 0)
+              continue;
+            if (shown++ == rows)
+              break;
             it.printf(92, y, id(f5x7), "%.7s", sensor->get_name().c_str());
             y += 8;
-            if (sensor->has_state()) {
-              it.printf(92, y, id(f5x7), "%.1f", sensor->state);
-            } else {
+            if (std::isnan(sensor->state)) {
               it.print(92, y, id(f5x7), "--.-");
+            } else {
+              it.printf(92, y, id(f5x7), "%.1f", sensor->state);
             }
             y += 11;
           }

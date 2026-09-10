@@ -26,7 +26,7 @@ The JXD-R6-E1ETH-LCD is a powerful DIN-rail automation controller with the follo
 - **6 Digital inputs** via PCA9554 I/O expander
 - **OLED Display**: SSD1306/SH1106 128x64 pixels with interactive menu
 - **RTC**: PCF8563 hardware real-time clock with battery backup
-- **Temperature monitoring**: Onboard TMP102 sensor + Dallas DS18B20 over a DS2484 I²C-to-1-Wire bridge
+- **Temperature monitoring**: Onboard TMP102 sensor + up to eight Dallas DS18B20 over a DS2484 I²C-to-1-Wire bridge
 - **Connectivity**: LAN8720 Ethernet or WiFi (ESP32 built-in)
 - **Voltage monitoring**: Input voltage measurement
 - **RS485/Modbus**: 2x UART interfaces for Modbus RTU communication and for add-on and custom expansion modules
@@ -37,7 +37,7 @@ The JXD-R6-E1ETH-LCD is a powerful DIN-rail automation controller with the follo
 - **Modbus RTU Server**: Acts as Modbus slave, mapping relays to coils and digital inputs to discrete inputs
 - **Home Assistant Integration**: Native ESPHome API with automatic entity discovery and OTA updates
 - **Display Control**: Interactive OLED menu with status, time, relay control, input monitoring, and settings
-- **Dallas Temperature Sensors**: OneWire support for multiple DS18B20 sensors ([setup guide](doc/ONEWIRE_WORKFLOW.md))
+- **Dallas Temperature Sensors**: eight DS18B20 slots, filled automatically and kept across reboots ([details](doc/ONEWIRE_WORKFLOW.md))
 
 ## Repository Layout
 
@@ -198,7 +198,8 @@ Shows device name, uptime, input voltage, and IP address.
 
 Relay states, digital input states and temperature readings at a glance, and it switches
 the relays: LEFT and RIGHT move the selection along the relay row — the selected number is
-drawn inverted on the device — and CENTER toggles that relay.
+drawn inverted on the device — and CENTER toggles that relay. UP and DOWN scroll the
+temperature column.
 
 **Getting here**: LEFT from the main page.
 
@@ -218,7 +219,7 @@ Current date and time from the hardware RTC.
 - **Inputs** - live state of the 6 digital inputs
 - **Temperatures** - temperature sensor readings
 - **Info** - network information (IP, MAC address)
-- **Settings** - display auto-off timer, WiFi credential reset (WiFi version only), factory reset, reboot
+- **Settings** - display auto-off timer, temperature slots, WiFi credential reset (WiFi version only), factory reset, reboot
 
 **Getting here**: CENTER from the main page.
 
@@ -239,11 +240,11 @@ page, anything else on the main page.
 | `LEFT`      | Main page → status page; on the status page selects the previous relay; adjusts menu values |
 | `RIGHT`     | Main page → time page; on the status page selects the next relay; adjusts menu values      |
 | `CENTER`    | Main page → menu; on the status page toggles the selected relay; in the menu enters        |
-| `UP` `DOWN` | Move through the menu                                                                      |
+| `UP` `DOWN` | Move through the menu; on the status page scroll the temperatures                          |
 
 ## Documentation
 
-- **[OneWire Workflow Guide](doc/ONEWIRE_WORKFLOW.md)**: Step-by-step guide for adding Dallas DS18B20 temperature sensors
+- **[OneWire Temperature Sensors](doc/ONEWIRE_WORKFLOW.md)**: How DS18B20 sensors get their slots, and how to reassign them
 - **[WiFi Setup](doc/WIFI_SETUP.md)**: Provisioning the WiFi variant through its captive portal
 
 ## Modbus RTU Server

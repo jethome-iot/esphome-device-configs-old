@@ -82,8 +82,59 @@ graphical_display_menu:
       items:
         - type: label
           text: !lambda |-
-            return str_sprintf("%s: %2.1f°C", id(temperature_sensor).get_name().c_str(),
-                               id(temperature_sensor).state);
+            auto *s = id(temp_1);
+            if (std::isnan(s->state))
+              return str_sprintf("%s: --", s->get_name().c_str());
+            return str_sprintf("%s: %.1f°C", s->get_name().c_str(), s->state);
+
+        - type: label
+          text: !lambda |-
+            auto *s = id(temp_2);
+            if (std::isnan(s->state))
+              return str_sprintf("%s: --", s->get_name().c_str());
+            return str_sprintf("%s: %.1f°C", s->get_name().c_str(), s->state);
+
+        - type: label
+          text: !lambda |-
+            auto *s = id(temp_3);
+            if (std::isnan(s->state))
+              return str_sprintf("%s: --", s->get_name().c_str());
+            return str_sprintf("%s: %.1f°C", s->get_name().c_str(), s->state);
+
+        - type: label
+          text: !lambda |-
+            auto *s = id(temp_4);
+            if (std::isnan(s->state))
+              return str_sprintf("%s: --", s->get_name().c_str());
+            return str_sprintf("%s: %.1f°C", s->get_name().c_str(), s->state);
+
+        - type: label
+          text: !lambda |-
+            auto *s = id(temp_5);
+            if (std::isnan(s->state))
+              return str_sprintf("%s: --", s->get_name().c_str());
+            return str_sprintf("%s: %.1f°C", s->get_name().c_str(), s->state);
+
+        - type: label
+          text: !lambda |-
+            auto *s = id(temp_6);
+            if (std::isnan(s->state))
+              return str_sprintf("%s: --", s->get_name().c_str());
+            return str_sprintf("%s: %.1f°C", s->get_name().c_str(), s->state);
+
+        - type: label
+          text: !lambda |-
+            auto *s = id(temp_7);
+            if (std::isnan(s->state))
+              return str_sprintf("%s: --", s->get_name().c_str());
+            return str_sprintf("%s: %.1f°C", s->get_name().c_str(), s->state);
+
+        - type: label
+          text: !lambda |-
+            auto *s = id(temp_8);
+            if (std::isnan(s->state))
+              return str_sprintf("%s: --", s->get_name().c_str());
+            return str_sprintf("%s: %.1f°C", s->get_name().c_str(), s->state);
 
     - type: menu
       text: "Info"
@@ -97,6 +148,193 @@ graphical_display_menu:
         - type: select
           text: "Display off"
           select: display_off_timer_select
+
+        - type: menu
+          text: "Temp sensors"
+          items:
+            - type: menu
+              text: "All"
+              items:
+                - type: label
+                  text: "Forget all?"
+
+                - type: command
+                  text: "Confirm"
+                  id: forget_temps_yes
+                  on_value:
+                    - lambda: 'id(forget_temps_yes)->set_text("Confirm - OK");'
+                    - delay: 1s
+                    - script.execute:
+                        id: forget_temperatures
+                        slot: -1
+
+            - type: menu
+              text: "Temp1"
+              items:
+                - type: label
+                  text: !lambda |-
+                    uint64_t a = id(dallas_slots)[0];
+                    return a ? str_sprintf("0x%016" PRIx64, a) : std::string("empty");
+
+                - type: label
+                  text: "Forget slot?"
+
+                - type: command
+                  text: "Confirm"
+                  id: forget_temp1_yes
+                  on_value:
+                    - lambda: 'id(forget_temp1_yes)->set_text("Confirm - OK");'
+                    - delay: 1s
+                    - script.execute:
+                        id: forget_temperatures
+                        slot: 0
+
+            - type: menu
+              text: "Temp2"
+              items:
+                - type: label
+                  text: !lambda |-
+                    uint64_t a = id(dallas_slots)[1];
+                    return a ? str_sprintf("0x%016" PRIx64, a) : std::string("empty");
+
+                - type: label
+                  text: "Forget slot?"
+
+                - type: command
+                  text: "Confirm"
+                  id: forget_temp2_yes
+                  on_value:
+                    - lambda: 'id(forget_temp2_yes)->set_text("Confirm - OK");'
+                    - delay: 1s
+                    - script.execute:
+                        id: forget_temperatures
+                        slot: 1
+
+            - type: menu
+              text: "Temp3"
+              items:
+                - type: label
+                  text: !lambda |-
+                    uint64_t a = id(dallas_slots)[2];
+                    return a ? str_sprintf("0x%016" PRIx64, a) : std::string("empty");
+
+                - type: label
+                  text: "Forget slot?"
+
+                - type: command
+                  text: "Confirm"
+                  id: forget_temp3_yes
+                  on_value:
+                    - lambda: 'id(forget_temp3_yes)->set_text("Confirm - OK");'
+                    - delay: 1s
+                    - script.execute:
+                        id: forget_temperatures
+                        slot: 2
+
+            - type: menu
+              text: "Temp4"
+              items:
+                - type: label
+                  text: !lambda |-
+                    uint64_t a = id(dallas_slots)[3];
+                    return a ? str_sprintf("0x%016" PRIx64, a) : std::string("empty");
+
+                - type: label
+                  text: "Forget slot?"
+
+                - type: command
+                  text: "Confirm"
+                  id: forget_temp4_yes
+                  on_value:
+                    - lambda: 'id(forget_temp4_yes)->set_text("Confirm - OK");'
+                    - delay: 1s
+                    - script.execute:
+                        id: forget_temperatures
+                        slot: 3
+
+            - type: menu
+              text: "Temp5"
+              items:
+                - type: label
+                  text: !lambda |-
+                    uint64_t a = id(dallas_slots)[4];
+                    return a ? str_sprintf("0x%016" PRIx64, a) : std::string("empty");
+
+                - type: label
+                  text: "Forget slot?"
+
+                - type: command
+                  text: "Confirm"
+                  id: forget_temp5_yes
+                  on_value:
+                    - lambda: 'id(forget_temp5_yes)->set_text("Confirm - OK");'
+                    - delay: 1s
+                    - script.execute:
+                        id: forget_temperatures
+                        slot: 4
+
+            - type: menu
+              text: "Temp6"
+              items:
+                - type: label
+                  text: !lambda |-
+                    uint64_t a = id(dallas_slots)[5];
+                    return a ? str_sprintf("0x%016" PRIx64, a) : std::string("empty");
+
+                - type: label
+                  text: "Forget slot?"
+
+                - type: command
+                  text: "Confirm"
+                  id: forget_temp6_yes
+                  on_value:
+                    - lambda: 'id(forget_temp6_yes)->set_text("Confirm - OK");'
+                    - delay: 1s
+                    - script.execute:
+                        id: forget_temperatures
+                        slot: 5
+
+            - type: menu
+              text: "Temp7"
+              items:
+                - type: label
+                  text: !lambda |-
+                    uint64_t a = id(dallas_slots)[6];
+                    return a ? str_sprintf("0x%016" PRIx64, a) : std::string("empty");
+
+                - type: label
+                  text: "Forget slot?"
+
+                - type: command
+                  text: "Confirm"
+                  id: forget_temp7_yes
+                  on_value:
+                    - lambda: 'id(forget_temp7_yes)->set_text("Confirm - OK");'
+                    - delay: 1s
+                    - script.execute:
+                        id: forget_temperatures
+                        slot: 6
+
+            - type: menu
+              text: "Temp8"
+              items:
+                - type: label
+                  text: !lambda |-
+                    uint64_t a = id(dallas_slots)[7];
+                    return a ? str_sprintf("0x%016" PRIx64, a) : std::string("empty");
+
+                - type: label
+                  text: "Forget slot?"
+
+                - type: command
+                  text: "Confirm"
+                  id: forget_temp8_yes
+                  on_value:
+                    - lambda: 'id(forget_temp8_yes)->set_text("Confirm - OK");'
+                    - delay: 1s
+                    - script.execute:
+                        id: forget_temperatures
+                        slot: 7
 
         - type: menu
           text: "Factory reset"
