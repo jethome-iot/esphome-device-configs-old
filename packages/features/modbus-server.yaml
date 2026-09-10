@@ -1,8 +1,76 @@
-# RS485 bus. Baud rate and pins: packages/features/uarts.yaml.
+# RS485 bus on jxm_uart2 (pins: packages/features/uarts.yaml). Address, baud rate,
+# parity and stop bits are settings kept in flash and applied at boot.
 modbus:
   - id: modbus_bus
     uart_id: jxm_uart2
     role: server
+
+number:
+  - platform: template
+    name: "Modbus address"
+    id: modbus_address
+    entity_category: config
+    mode: box
+    optimistic: true
+    restore_value: true
+    initial_value: 1
+    min_value: 1
+    max_value: 247
+    step: 1
+
+select:
+  - platform: template
+    name: "Modbus baud rate"
+    id: modbus_baud_rate
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    initial_option: "9600"
+    options:
+      - "1200"
+      - "2400"
+      - "4800"
+      - "9600"
+      - "19200"
+      - "38400"
+      - "57600"
+      - "115200"
+
+  # Order matches uart::UARTParityOptions.
+  - platform: template
+    name: "Modbus parity"
+    id: modbus_parity
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    initial_option: "None"
+    options:
+      - "None"
+      - "Even"
+      - "Odd"
+
+  - platform: template
+    name: "Modbus stop bits"
+    id: modbus_stop_bits
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    initial_option: "1"
+    options:
+      - "1"
+      - "2"
+
+esphome:
+  on_boot:
+    - priority: 700
+      then:
+        - lambda: |-
+            id(modbus_server1).set_address((uint8_t) id(modbus_address).state);
+            auto *bus = id(jxm_uart2);
+            bus->set_baud_rate(parse_number<uint32_t>(id(modbus_baud_rate).current_option().c_str()).value_or(9600));
+            bus->set_stop_bits(parse_number<uint8_t>(id(modbus_stop_bits).current_option().c_str()).value_or(1));
+            bus->set_parity((uart::UARTParityOptions) id(modbus_parity).active_index().value_or(0));
+            bus->load_settings(false);
 
 # FC 0x01 and FC 0x02 read one shared bit table, so a bit counts as a coil or
 # as a discrete input only by having a write_lambda or not:
@@ -10,13 +78,66 @@ modbus:
 #   0x0000-0x0005  relays 1-6, read/write
 #   0x0010-0x0015  inputs 1-6, read only
 #
-# Registers are not mapped; courtesy_response answers 0 instead of an exception.
+# FC 0x03 and FC 0x04 likewise read one register table:
+#
+#   0x0000-0x0007  temperature slots 1-8, signed, 0.1 °C; 0x8000 = no reading
+#
+# Anything else answers 0 (courtesy_response) instead of an exception.
 modbus_server:
   - id: modbus_server1
     modbus_id: modbus_bus
     address: 0x01
     courtesy_response:
       enabled: true
+    registers:
+      - address: 0x0000
+        value_type: S_WORD
+        read_lambda: |-
+          float t = id(temp_1).state;
+          return (int16_t) (std::isnan(t) ? -32768 : lroundf(t * 10));
+
+      - address: 0x0001
+        value_type: S_WORD
+        read_lambda: |-
+          float t = id(temp_2).state;
+          return (int16_t) (std::isnan(t) ? -32768 : lroundf(t * 10));
+
+      - address: 0x0002
+        value_type: S_WORD
+        read_lambda: |-
+          float t = id(temp_3).state;
+          return (int16_t) (std::isnan(t) ? -32768 : lroundf(t * 10));
+
+      - address: 0x0003
+        value_type: S_WORD
+        read_lambda: |-
+          float t = id(temp_4).state;
+          return (int16_t) (std::isnan(t) ? -32768 : lroundf(t * 10));
+
+      - address: 0x0004
+        value_type: S_WORD
+        read_lambda: |-
+          float t = id(temp_5).state;
+          return (int16_t) (std::isnan(t) ? -32768 : lroundf(t * 10));
+
+      - address: 0x0005
+        value_type: S_WORD
+        read_lambda: |-
+          float t = id(temp_6).state;
+          return (int16_t) (std::isnan(t) ? -32768 : lroundf(t * 10));
+
+      - address: 0x0006
+        value_type: S_WORD
+        read_lambda: |-
+          float t = id(temp_7).state;
+          return (int16_t) (std::isnan(t) ? -32768 : lroundf(t * 10));
+
+      - address: 0x0007
+        value_type: S_WORD
+        read_lambda: |-
+          float t = id(temp_8).state;
+          return (int16_t) (std::isnan(t) ? -32768 : lroundf(t * 10));
+
     bits:
       - address: 0x0000
         read_lambda: 'return id(relay_1).state;'

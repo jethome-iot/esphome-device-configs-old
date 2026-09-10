@@ -14,7 +14,13 @@ binary_sensor:
       mode:
         input: true
     on_press:
-      - display_menu.up:
+      - lambda: |-
+          if (id(display_menu).is_active()) {
+            id(display_menu).up();
+          } else if (id(display1).get_active_page() == id(status_page)) {
+            id(status_temp_scroll)--;
+            id(display1).update();
+          }
       - script.execute: check_blank_page
 
   - platform: gpio
@@ -27,7 +33,13 @@ binary_sensor:
       mode:
         input: true
     on_press:
-      - display_menu.down:
+      - lambda: |-
+          if (id(display_menu).is_active()) {
+            id(display_menu).down();
+          } else if (id(display1).get_active_page() == id(status_page)) {
+            id(status_temp_scroll)++;
+            id(display1).update();
+          }
       - script.execute: check_blank_page
 
   - platform: gpio
@@ -46,6 +58,7 @@ binary_sensor:
             id(display_menu).left();
           } else if (page == id(main_page) || page == id(blank_page)) {
             id(status_relay_sel) = 0;
+            id(status_temp_scroll) = 0;
             id(display1).show_page(id(status_page));
           } else if (page == id(status_page) && !id(relays).empty()) {
             int n = id(relays).size();

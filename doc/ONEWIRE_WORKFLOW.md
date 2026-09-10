@@ -1,89 +1,48 @@
-# OneWire Temperature Sensors Workflow
+# OneWire Temperature Sensors
 
-Guide for adding Dallas DS18B20 temperature sensors to your device.
+Eight slots, `Temp1` to `Temp8`, for DS18B20 sensors on the 1-Wire connector (DS2484
+bridge at `0x18`, `packages/boards/jxd-d6-r6-rev1.2.yaml`). Each slot is a sensor in Home
+Assistant, a row in the **Temperatures** menu and on the status page, and holding register
+`0x0000`-`0x0007`.
 
-The 1-Wire bus is driven by a DS2484 I²C-to-1-Wire bridge at address `0x18`
-(`packages/boards/jxd-d6-r6-rev1.2.yaml`), so sensors are found on that bus rather than
-on a bit-banged GPIO.
+## Slots
 
-## Step 1: Find Sensor Address
+At boot every new sensor takes the lowest free slot, in bus order, and the slot keeps its
+ROM address in flash from then on; adding, removing or swapping other sensors does not
+move it. An unplugged sensor reads `--` (`0x8000` over Modbus). Empty slots log
+`Index 8 out of range` at boot; harmless. A reading of exactly 85.0 °C, the DS18B20
+power-on value, is dropped.
 
-Connect DS18B20 sensor(s) to the onewire connector, then check logs:
+To choose the order, connect the sensors one at a time, rebooting after each.
 
-```
-[15:45:33.923][C][ds2484:021]: DS2484 1-wire bus:
-[15:45:33.934][C][ds2484:084]:   Found devices:
-[15:45:33.940][C][ds2484:086]:     0xeb01227905460228 (DS18B20)
-```
+## Addresses
 
-Copy the address: `0xeb01227905460228`
+**Settings → Temp sensors → TempN** shows the slot's ROM address, e.g.
+`0xeb01227905460228`. The boot log lists them too (`ds2484: Found devices`).
 
-## Step 2: Add the Sensor
+## Pinning
 
-Edit `packages/features/temperature.yaml`:
+Replace `index:` with the address in `packages/features/temperature.yaml`:
 
 ```yaml
-sensor:
   - platform: dallas_temp
-    name: "Temperature"
-    id: temperature_sensor
-    update_interval: 20s
-
-  - platform: dallas_temp
+    name: "Temp2"
+    id: temp_2
     address: 0xeb01227905460228
-    name: "Temperature 2"
-    id: temperature_sensor_2
-    update_interval: 20s
 ```
 
-With more than one sensor on the bus, give every sensor an explicit `address`
-(or `index`) — otherwise the assignment depends on discovery order.
+A pinned slot always holds that sensor; forgetting it has no effect.
 
-## Step 3: Add to the `temperatures` global
+## Forgetting
 
-The status page iterates a global vector of sensor pointers instead of a group.
-Add the new sensor to it in the same file:
+**Settings → Temp sensors → TempN → Confirm** clears the slot and reboots; the sensor in
+it, or a new one, takes the lowest free slot again. **All** clears every slot, so sensors
+are numbered again in bus order. Factory reset clears them too.
 
-```yaml
-globals:
-  - id: temperatures
-    type: std::vector<sensor::Sensor *>
+## More slots
 
-esphome:
-  on_boot:
-    - priority: 800
-      then:
-        - lambda: 'id(temperatures) = {id(temperature_sensor), id(temperature_sensor_2)};'
-```
-
-## Step 4: Add to the Display Menu
-
-Edit `packages/display/menu.yaml`, in the `Temperatures` submenu:
-
-```yaml
-    - type: menu
-      text: "Temperatures"
-      items:
-        - type: label
-          text: !lambda |-
-            return str_sprintf("%s: %2.1f°C", id(temperature_sensor).get_name().c_str(),
-                               id(temperature_sensor).state);
-
-        - type: label
-          text: !lambda |-
-            return str_sprintf("%s: %2.1f°C", id(temperature_sensor_2).get_name().c_str(),
-                               id(temperature_sensor_2).state);
-```
-
-## Step 5: Upload Firmware
-
-```bash
-esphome run jxd-r6-e1eth-lcd-eth.yaml
-```
-
-The sensor will now appear in Home Assistant and on the device display.
-
-## Hardware Connection
-
-Connect DS18B20 sensors to the onewire connector on the device. Multiple sensors
-can be connected in parallel on the same bus.
+Add a `dallas_temp` sensor with the next `index`, grow `dallas_slots`, and add it to
+`temperatures` and to `sensors` in the slot lambda (`packages/features/temperature.yaml`);
+add a **Temperatures** label and a **Temp sensors** entry (`packages/display/menu.yaml`), a
+register (`packages/features/modbus-server.yaml`), the README line and `TEMP_COUNT` in
+`scripts/modbus_probe.py`. Growing the table empties it once.

@@ -5,6 +5,7 @@ uart:
     baud_rate: 9600
     stop_bits: 1
 
+  # Defaults only: the Modbus settings in modbus-server.yaml override them at boot.
   - id: jxm_uart2
     tx_pin: GPIO32
     rx_pin: GPIO39
