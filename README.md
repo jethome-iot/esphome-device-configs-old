@@ -51,6 +51,8 @@ that make up the device. Everything else lives under `packages/`, split by role:
 | `packages/features/` | SoC buses (`i2c.yaml`, `uarts.yaml`) and functionality — `temperature`, `rtc-time`, `vin-measure`, `modbus-server`, `display-off`, `ethernet`, `wifi`                                                                   |
 | `packages/display/`  | Display, pages, menu and buttons — `display.yaml`, `menu.yaml`, `buttons.yaml`, `menu-items-eth.yaml`, `menu-items-wifi.yaml`                                                                                           |
 
+The BDF display fonts in `fonts/` come from [IT-Studio-Rech/bdf-fonts](https://github.com/IT-Studio-Rech/bdf-fonts).
+
 ### Generated configs (`dist/`)
 
 `dist/` is what the ESPHome Builder add-on imports; build and flash locally from the
