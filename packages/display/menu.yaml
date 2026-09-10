@@ -1,18 +1,9 @@
-globals:
-  - id: menu_at_root
-    type: bool
-    initial_value: 'true'
-
 graphical_display_menu:
   id: display_menu
   display: display1
   font: f7x14_mod2
   mode: joystick
   active: false
-  on_enter:
-    - lambda: 'id(menu_at_root) = true;'
-  on_leave:
-    - lambda: 'id(menu_at_root) = false;'
   on_redraw:
     then:
       - component.update: display1
