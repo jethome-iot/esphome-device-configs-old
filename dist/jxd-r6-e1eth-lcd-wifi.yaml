@@ -471,13 +471,13 @@ interval:
           \ >= id(display_off_threshold_s)) {\n  id(display_menu).hide();\n  id(display1).show_page(id(blank_page));\n\
           } else {\n  id(display_off_s)++;\n}"
 font:
-  - file: https://raw.githubusercontent.com/jethome-iot/esphome-device-configs/refactor/simplify-configs/fonts/7x14-mod2.bdf
+  - file: https://raw.githubusercontent.com/jethome-iot/esphome-device-configs/master/fonts/7x14-mod2.bdf
     id: f7x14_mod2
-  - file: https://raw.githubusercontent.com/jethome-iot/esphome-device-configs/refactor/simplify-configs/fonts/6x12.bdf
+  - file: https://raw.githubusercontent.com/jethome-iot/esphome-device-configs/master/fonts/6x12.bdf
     id: f6x12
-  - file: https://raw.githubusercontent.com/jethome-iot/esphome-device-configs/refactor/simplify-configs/fonts/5x7.bdf
+  - file: https://raw.githubusercontent.com/jethome-iot/esphome-device-configs/master/fonts/5x7.bdf
     id: f5x7
-  - file: https://raw.githubusercontent.com/jethome-iot/esphome-device-configs/refactor/simplify-configs/fonts/spleen-12x24.bdf
+  - file: https://raw.githubusercontent.com/jethome-iot/esphome-device-configs/master/fonts/spleen-12x24.bdf
     id: big_label_font
 display:
   - platform: ssd1306_i2c
@@ -682,7 +682,7 @@ wifi:
 captive_portal:
   id: captive_portal_id
 dashboard_import:
-  package_import_url: github://jethome-iot/esphome-device-configs/dist/jxd-r6-e1eth-lcd-wifi.yaml@refactor/simplify-configs
+  package_import_url: github://jethome-iot/esphome-device-configs/dist/jxd-r6-e1eth-lcd-wifi.yaml@master
   import_full_config: true
 substitutions:
   timezone: ''
