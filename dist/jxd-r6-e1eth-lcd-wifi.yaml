@@ -321,6 +321,9 @@ globals:
     type: std::vector<binary_sensor::BinarySensor *>
   - id: temperatures
     type: std::vector<sensor::Sensor *>
+  - id: stored_timezone
+    type: esphome::time::ParsedTimezone
+    restore_value: true
   - id: display_off_threshold_s
     type: uint32_t
   - id: display_off_s
@@ -369,8 +372,16 @@ uart:
     baud_rate: 9600
     stop_bits: 1
 time:
+  - platform: homeassistant
+    id: homeassistant_time
+    on_time_sync:
+      then:
+        - pcf8563.write_time: null
+        - delay: 1s
+        - lambda: id(stored_timezone) = esphome::time::get_global_tz();
   - platform: sntp
     id: sntp_time
+    timezone: ${timezone}
     servers:
       - 0.pool.ntp.org
       - 1.pool.ntp.org
@@ -386,6 +397,8 @@ time:
 script:
   - id: setup_time
     then:
+      - lambda: "const auto &tz = id(stored_timezone);\nif (tz.std_offset_seconds\
+          \ != 0 || tz.has_dst()) {\n  esphome::time::set_global_tz(tz);\n}"
       - pcf8563.read_time:
           id: pcf8563_time
   - id: check_blank_page
@@ -685,7 +698,7 @@ dashboard_import:
   package_import_url: github://jethome-iot/esphome-device-configs/dist/jxd-r6-e1eth-lcd-wifi.yaml@master
   import_full_config: true
 substitutions:
-  timezone: ''
+  timezone: UTC
   name: jxd-r6-e1eth-lcd-wifi
   friendly_name: JXD-R6-E1ETH-LCD
   version: 1.0.0

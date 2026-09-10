@@ -11,8 +11,9 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # ESPHome bakes a timezone into the firmware and falls back to the build
-  # machine's own when none is given, so pin the runner to keep builds identical.
+  # The homeassistant time source takes no timezone of its own, so ESPHome bakes
+  # the build machine's in as its initial one. Pin the runner to keep builds
+  # identical.
   TZ: Etc/UTC
 
 jobs:

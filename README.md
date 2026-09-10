@@ -33,7 +33,7 @@ The JXD-R6-E1ETH-LCD is a powerful DIN-rail automation controller with the follo
 
 ### Software Features
 
-- **RTC Time Synchronization**: Hardware RTC with NTP sync and battery backup
+- **RTC Time Synchronization**: Hardware RTC with battery backup, synced from Home Assistant or NTP, timezone included
 - **Modbus RTU Server**: Acts as Modbus slave, mapping relays to coils and digital inputs to discrete inputs
 - **Home Assistant Integration**: Native ESPHome API with automatic entity discovery and OTA updates
 - **Display Control**: Interactive OLED menu with status, time, relay control, input monitoring, and settings
@@ -140,14 +140,12 @@ esphome run jxd-r6-e1eth-lcd-wifi.yaml
 
 ### Timezone
 
-The timezone is compiled into the firmware and is never changed at runtime — Home
-Assistant does not override it.
-
-By default the build uses the timezone of the machine doing the build, so pin it
-explicitly for reproducible builds:
+The device takes its timezone from Home Assistant on connect and keeps it across
+reboots. Until it is paired it runs on the zone compiled into the firmware, `UTC`
+by default — set that for a device that runs standalone:
 
 ```bash
-esphome -s timezone UTC run jxd-r6-e1eth-lcd-eth.yaml
+esphome -s timezone Europe/Berlin run jxd-r6-e1eth-lcd-eth.yaml
 ```
 
 or per device in the device config:
