@@ -29,7 +29,7 @@ The JXD-R6-E1ETH-LCD is a powerful DIN-rail automation controller with the follo
 - **Temperature monitoring**: Onboard TMP102 sensor + Dallas DS18B20 over a DS2484 I²C-to-1-Wire bridge
 - **Connectivity**: LAN8720 Ethernet or WiFi (ESP32 built-in)
 - **Voltage monitoring**: Input voltage measurement
-- **RS485/Modbus**: 2x UART interfaces for Modbus RTU communication
+- **RS485/Modbus**: 2x UART interfaces for Modbus RTU communication and for add-on and custom expansion modules
 
 ### Software Features
 
