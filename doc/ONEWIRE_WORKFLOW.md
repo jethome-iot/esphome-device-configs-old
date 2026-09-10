@@ -2,13 +2,14 @@
 
 Eight slots, `Temp1` to `Temp8`, for DS18B20 sensors on the 1-Wire connector (DS2484
 bridge at `0x18`, `packages/boards/jxd-d6-r6-rev1.2.yaml`). Each slot is a sensor in Home
-Assistant, a row in the **Temperatures** menu and on the status page.
+Assistant, a row in the **Temperatures** menu and on the status page, and holding register
+`0x0000`-`0x0007`.
 
 ## Slots
 
 At boot every new sensor takes the lowest free slot, in bus order, and the slot keeps its
 ROM address in flash from then on; adding, removing or swapping other sensors does not
-move it. An unplugged sensor reads `--`. Empty slots log
+move it. An unplugged sensor reads `--` (`0x8000` over Modbus). Empty slots log
 `Index 8 out of range` at boot; harmless. A reading of exactly 85.0 °C, the DS18B20
 power-on value, is dropped.
 
@@ -42,5 +43,6 @@ are numbered again in bus order. Factory reset clears them too.
 
 Add a `dallas_temp` sensor with the next `index`, grow `dallas_slots`, and add it to
 `temperatures` and to `sensors` in the slot lambda (`packages/features/temperature.yaml`);
-add a **Temperatures** label and a **Temp sensors** entry (`packages/display/menu.yaml`).
-Growing the table empties it once.
+add a **Temperatures** label and a **Temp sensors** entry (`packages/display/menu.yaml`), a
+register (`packages/features/modbus-server.yaml`), the README line and `TEMP_COUNT` in
+`scripts/modbus_probe.py`. Growing the table empties it once.

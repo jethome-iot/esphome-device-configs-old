@@ -424,6 +424,19 @@ esphome:
             }\nfor (size_t i = 0; i < std::size(slots); i++) {\n  if (slots[i] !=\
             \ 0) {\n    sensors[i]->set_address(slots[i]);\n  } else {\n    sensors[i]->set_index(std::size(slots));\
             \  // out of range on purpose: an empty slot takes no device\n  }\n}"
+    - priority: 700
+      then:
+        - lambda: 'id(modbus_server1).set_address((uint8_t) id(modbus_address).state);
+
+            auto *bus = id(jxm_uart2);
+
+            bus->set_baud_rate(parse_number<uint32_t>(id(modbus_baud_rate).current_option().c_str()).value_or(9600));
+
+            bus->set_stop_bits(parse_number<uint8_t>(id(modbus_stop_bits).current_option().c_str()).value_or(1));
+
+            bus->set_parity((uart::UARTParityOptions) id(modbus_parity).active_index().value_or(0));
+
+            bus->load_settings(false);'
     - priority: 600
       then:
         - delay: 200ms
@@ -496,12 +509,121 @@ modbus:
   - id: modbus_bus
     uart_id: jxm_uart2
     role: server
+number:
+  - platform: template
+    name: Modbus address
+    id: modbus_address
+    entity_category: config
+    mode: box
+    optimistic: true
+    restore_value: true
+    initial_value: 1
+    min_value: 1
+    max_value: 247
+    step: 1
+select:
+  - platform: template
+    name: Modbus baud rate
+    id: modbus_baud_rate
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    initial_option: '9600'
+    options:
+      - '1200'
+      - '2400'
+      - '4800'
+      - '9600'
+      - '19200'
+      - '38400'
+      - '57600'
+      - '115200'
+  - platform: template
+    name: Modbus parity
+    id: modbus_parity
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    initial_option: None
+    options:
+      - None
+      - Even
+      - Odd
+  - platform: template
+    name: Modbus stop bits
+    id: modbus_stop_bits
+    entity_category: config
+    optimistic: true
+    restore_value: true
+    initial_option: '1'
+    options:
+      - '1'
+      - '2'
+  - platform: template
+    id: display_off_timer_select
+    optimistic: true
+    internal: true
+    restore_value: true
+    initial_option: 5m
+    options:
+      - 5m
+      - 10m
+      - 15m
+      - never
+    on_value:
+      then:
+        - lambda: 'const uint32_t MINUTES[] = {5, 10, 15, 0};
+
+            id(display_off_threshold_s) = MINUTES[i] * 60;
+
+            id(display_off_s) = 0;'
 modbus_server:
   - id: modbus_server1
     modbus_id: modbus_bus
     address: 1
     courtesy_response:
       enabled: true
+    registers:
+      - address: 0
+        value_type: S_WORD
+        read_lambda: 'float t = id(temp_1).state;
+
+          return (int16_t) (std::isnan(t) ? -32768 : lroundf(t * 10));'
+      - address: 1
+        value_type: S_WORD
+        read_lambda: 'float t = id(temp_2).state;
+
+          return (int16_t) (std::isnan(t) ? -32768 : lroundf(t * 10));'
+      - address: 2
+        value_type: S_WORD
+        read_lambda: 'float t = id(temp_3).state;
+
+          return (int16_t) (std::isnan(t) ? -32768 : lroundf(t * 10));'
+      - address: 3
+        value_type: S_WORD
+        read_lambda: 'float t = id(temp_4).state;
+
+          return (int16_t) (std::isnan(t) ? -32768 : lroundf(t * 10));'
+      - address: 4
+        value_type: S_WORD
+        read_lambda: 'float t = id(temp_5).state;
+
+          return (int16_t) (std::isnan(t) ? -32768 : lroundf(t * 10));'
+      - address: 5
+        value_type: S_WORD
+        read_lambda: 'float t = id(temp_6).state;
+
+          return (int16_t) (std::isnan(t) ? -32768 : lroundf(t * 10));'
+      - address: 6
+        value_type: S_WORD
+        read_lambda: 'float t = id(temp_7).state;
+
+          return (int16_t) (std::isnan(t) ? -32768 : lroundf(t * 10));'
+      - address: 7
+        value_type: S_WORD
+        read_lambda: 'float t = id(temp_8).state;
+
+          return (int16_t) (std::isnan(t) ? -32768 : lroundf(t * 10));'
     bits:
       - address: 0
         read_lambda: return id(relay_1).state;
@@ -539,25 +661,6 @@ modbus_server:
         read_lambda: return id(input_5).state;
       - address: 21
         read_lambda: return id(input_6).state;
-select:
-  - platform: template
-    id: display_off_timer_select
-    optimistic: true
-    internal: true
-    restore_value: true
-    initial_option: 5m
-    options:
-      - 5m
-      - 10m
-      - 15m
-      - never
-    on_value:
-      then:
-        - lambda: 'const uint32_t MINUTES[] = {5, 10, 15, 0};
-
-            id(display_off_threshold_s) = MINUTES[i] * 60;
-
-            id(display_off_s) = 0;'
 interval:
   - interval: 1s
     then:
@@ -773,6 +876,24 @@ graphical_display_menu:
         - type: select
           text: Display off
           select: display_off_timer_select
+        - type: menu
+          text: Modbus
+          items:
+            - type: label
+              text: Applied on reboot
+            - type: number
+              text: Address
+              number: modbus_address
+              format: '%.0f'
+            - type: select
+              text: Baud rate
+              select: modbus_baud_rate
+            - type: select
+              text: Parity
+              select: modbus_parity
+            - type: select
+              text: Stop bits
+              select: modbus_stop_bits
         - type: menu
           text: Temp sensors
           items:

@@ -150,6 +150,29 @@ graphical_display_menu:
           select: display_off_timer_select
 
         - type: menu
+          text: "Modbus"
+          items:
+            - type: label
+              text: "Applied on reboot"
+
+            - type: number
+              text: "Address"
+              number: modbus_address
+              format: "%.0f"
+
+            - type: select
+              text: "Baud rate"
+              select: modbus_baud_rate
+
+            - type: select
+              text: "Parity"
+              select: modbus_parity
+
+            - type: select
+              text: "Stop bits"
+              select: modbus_stop_bits
+
+        - type: menu
           text: "Temp sensors"
           items:
             - type: menu

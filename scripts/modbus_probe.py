@@ -18,10 +18,13 @@ import time
 
 import serial
 
-# JXD bit map, see packages/features/modbus-server.yaml. Coils and discrete inputs share
-# one bit address space in upstream modbus_server, so the two blocks are disjoint.
+# JXD map, see packages/features/modbus-server.yaml. Coils and discrete inputs share
+# one bit address space in modbus_server, so the two blocks are disjoint.
 COILS_BASE = 0x0000  # relays, FC 0x01/0x05/0x0F
 DISCRETE_BASE = 0x0010  # digital inputs, FC 0x02
+TEMP_BASE = 0x0000  # temperature slots, FC 0x03/0x04, signed 0.1 °C
+TEMP_COUNT = 8
+TEMP_NONE = 0x8000  # slot has no reading
 
 EXCEPTIONS = {
     0x01: "ILLEGAL_FUNCTION",
@@ -60,15 +63,25 @@ def crc16(data: bytes) -> int:
 
 
 class ModbusRTU:
-    def __init__(self, port: str, baud: int, unit: int, timeout: float) -> None:
+    def __init__(
+        self,
+        port: str,
+        baud: int,
+        unit: int,
+        timeout: float,
+        parity: str = "N",
+        stop_bits: int = 1,
+    ) -> None:
         self.unit = unit
         self.verbose = False
+        self.framing = f"8{parity}{stop_bits}"
         self.ser = serial.Serial(
-            port, baud, bytesize=8, parity="N", stopbits=1, timeout=timeout
+            port, baud, bytesize=8, parity=parity, stopbits=stop_bits, timeout=timeout
         )
         # Silence between frames: 3.5 characters, floored at the 1.75 ms the spec
         # fixes for baud rates above 19200.
-        self.frame_gap = max(3.5 * 11 / baud, 0.00175)
+        char_bits = 9 + (parity != "N") + stop_bits
+        self.frame_gap = max(3.5 * char_bits / baud, 0.00175)
 
     def close(self) -> None:
         self.ser.close()
@@ -170,6 +183,16 @@ def fmt_bits(bits: list[bool]) -> str:
     return " ".join("1" if b else "0" for b in bits)
 
 
+def fmt_temps(registers: list[int]) -> str:
+    def one(raw: int) -> str:
+        if raw == TEMP_NONE:
+            return "--.-"
+        signed = raw - 0x10000 if raw & 0x8000 else raw
+        return f"{signed / 10:.1f}"
+
+    return " ".join(one(raw) for raw in registers)
+
+
 def probe(bus: ModbusRTU) -> int:
     """Walk the whole documented map, reporting each step independently."""
     failures = 0
@@ -182,7 +205,9 @@ def probe(bus: ModbusRTU) -> int:
             failures += 1
             print(f"{label:<44} FAIL: {err}")
 
-    print(f"unit 0x{bus.unit:02X} on {bus.ser.port} @ {bus.ser.baudrate} 8N1\n")
+    print(
+        f"unit 0x{bus.unit:02X} on {bus.ser.port} @ {bus.ser.baudrate} {bus.framing}\n"
+    )
 
     step(
         f"relays           FC 0x01 @ 0x{COILS_BASE:04X} x6",
@@ -193,8 +218,16 @@ def probe(bus: ModbusRTU) -> int:
         lambda: fmt_bits(bus.read_discrete_inputs(DISCRETE_BASE, 6)),
     )
     step(
-        "courtesy regs    FC 0x03 @ 0x0000 x2",
-        lambda: bus.read_holding_registers(0x0000, 2),
+        f"temperatures     FC 0x03 @ 0x{TEMP_BASE:04X} x{TEMP_COUNT}",
+        lambda: fmt_temps(bus.read_holding_registers(TEMP_BASE, TEMP_COUNT)),
+    )
+    step(
+        f"temperatures     FC 0x04 @ 0x{TEMP_BASE:04X} x{TEMP_COUNT}",
+        lambda: fmt_temps(bus.read_input_registers(TEMP_BASE, TEMP_COUNT)),
+    )
+    step(
+        "courtesy regs    FC 0x03 @ 0x0100 x2",
+        lambda: bus.read_holding_registers(0x0100, 2),
     )
     step(
         "unmapped bit     FC 0x01 @ 0x0100",
@@ -237,6 +270,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", default="/dev/ttyUSB2")
     parser.add_argument("--baud", type=int, default=9600)
+    parser.add_argument("--parity", choices=["N", "E", "O"], default="N")
+    parser.add_argument("--stop-bits", type=int, choices=[1, 2], default=1)
     parser.add_argument("--unit", type=auto_int, default=1)
     parser.add_argument("--timeout", type=float, default=1.0)
     parser.add_argument("-v", "--verbose", action="store_true", help="dump frames")
@@ -265,7 +300,9 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        bus = ModbusRTU(args.port, args.baud, args.unit, args.timeout)
+        bus = ModbusRTU(
+            args.port, args.baud, args.unit, args.timeout, args.parity, args.stop_bits
+        )
     except serial.SerialException as err:
         print(f"cannot open {args.port}: {err}", file=sys.stderr)
         return 2

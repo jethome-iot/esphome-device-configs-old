@@ -34,7 +34,7 @@ The JXD-R6-E1ETH-LCD is a powerful DIN-rail automation controller with the follo
 ### Software Features
 
 - **RTC Time Synchronization**: Hardware RTC with battery backup, synced from Home Assistant or NTP, timezone included
-- **Modbus RTU Server**: Acts as Modbus slave, mapping relays to coils and digital inputs to discrete inputs
+- **Modbus RTU Server**: Acts as Modbus slave, mapping relays to coils, digital inputs to discrete inputs and temperatures to holding registers
 - **Home Assistant Integration**: Native ESPHome API with automatic entity discovery and OTA updates
 - **Display Control**: Interactive OLED menu with status, time, relay control, input monitoring, and settings
 - **Dallas Temperature Sensors**: eight DS18B20 slots, filled automatically and kept across reboots ([details](doc/ONEWIRE_WORKFLOW.md))
@@ -219,7 +219,7 @@ Current date and time from the hardware RTC.
 - **Inputs** - live state of the 6 digital inputs
 - **Temperatures** - temperature sensor readings
 - **Info** - network information (IP, MAC address)
-- **Settings** - display auto-off timer, temperature slots, WiFi credential reset (WiFi version only), factory reset, reboot
+- **Settings** - display auto-off timer, Modbus settings, temperature slots, WiFi credential reset (WiFi version only), factory reset, reboot
 
 **Getting here**: CENTER from the main page.
 
@@ -251,14 +251,18 @@ page, anything else on the main page.
 
 The device can act as a Modbus RTU server (slave) for integration with PLCs, SCADA systems, and other industrial automation equipment:
 
-- **Slave Address**: 0x01 (configurable)
-- **Baud Rate**: Configurable via UART settings (`packages/features/uarts.yaml`, `jxm_uart2`)
+- **Slave Address**: 1 by default
+- **Serial**: 9600 8N1 by default
 - **Coils** `0x0000`-`0x0005` (FC 0x01/0x05/0x0F): read/write relay 1-6
 - **Discrete Inputs** `0x0010`-`0x0015` (FC 0x02): read digital input 1-6
-- **Holding/input registers**: none mapped; a courtesy response answers `0` instead of an exception
+- **Holding Registers** `0x0000`-`0x0007` (FC 0x03/0x04): temperature 1-8, signed, 0.1 °C; `0x8000` = no reading
+- **Other registers**: a courtesy response answers `0` instead of an exception
 
-Upstream `modbus_server` keeps coils and discrete inputs in a single bit address space, so
-the two blocks are placed at different offsets rather than both starting at zero.
+Address, baud rate, parity and stop bits are set in **Settings → Modbus** or through the
+`Modbus …` entities in Home Assistant, and take effect after a reboot.
+
+`modbus_server` keeps coils and discrete inputs in one bit address space (hence
+the offsets) and holding and input registers in one table (hence FC 0x03/0x04 alike).
 
 **RS-485 Connector (JXM2)**:
 
