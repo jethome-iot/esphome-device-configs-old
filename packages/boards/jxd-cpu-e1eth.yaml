@@ -1,0 +1,58 @@
+esp32:
+  board: esp32dev
+  flash_size: 16MB
+  framework:
+    type: esp-idf
+    sdkconfig_options:
+      CONFIG_COMPILER_OPTIMIZATION_SPEED: y
+      CONFIG_D0WD_PSRAM_CLK_IO: "6"
+
+psram:
+  mode: quad
+  speed: 80MHz
+
+api:
+  encryption:
+  reboot_timeout: 15min
+
+ota:
+  - platform: esphome
+
+preferences:
+  flash_write_interval: 5s
+
+logger:
+  level: debug
+
+web_server:
+  port: 80
+
+sensor:
+  - platform: tmp102
+    name: "PCB Temp"
+    id: pcb_temp
+    update_interval: 20s
+    entity_category: diagnostic
+
+switch:
+  - platform: gpio
+    name: "Red led"
+    id: red_led
+    pin: GPIO2
+
+binary_sensor:
+  - platform: gpio
+    name: "FN button"
+    id: fn_button
+    internal: true
+    pin:
+      number: GPIO0
+      inverted: true
+
+text_sensor:
+  - platform: uptime
+    name: Uptime
+    id: uptime_sensor
+    internal: true
+    format:
+      separator: " "

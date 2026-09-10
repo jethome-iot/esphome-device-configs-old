@@ -2,12 +2,12 @@
 """Minimal Modbus RTU client for probing a JXD device over RS485.
 
 Speaks just enough Modbus to exercise the register map that
-`include/jxd-jxm-modbus-auto.yaml` exposes. Needs only pyserial, which ESPHome
+`packages/features/modbus-server.yaml` exposes. Needs only pyserial, which ESPHome
 already pulls in, so `.venv/bin/python scripts/modbus_probe.py` works as is.
 
   .venv/bin/python scripts/modbus_probe.py --port /dev/ttyUSB2 probe
-  .venv/bin/python scripts/modbus_probe.py --port /dev/ttyUSB2 read-coils 0xA000 6
-  .venv/bin/python scripts/modbus_probe.py --port /dev/ttyUSB2 write-coil 0xA000 1
+  .venv/bin/python scripts/modbus_probe.py --port /dev/ttyUSB2 read-coils 0x0000 6
+  .venv/bin/python scripts/modbus_probe.py --port /dev/ttyUSB2 write-coil 0x0000 1
 """
 
 from __future__ import annotations
@@ -18,17 +18,16 @@ import time
 
 import serial
 
-# JXD register map, see include/jxd-jxm-modbus-auto.yaml
-COILS_BASE = 0xA000  # relays, FC 0x01/0x05/0x0F
-DISCRETE_BASE = 0xA000  # digital inputs, FC 0x02 (separate address space)
-REG_INPUT_COUNT = 0x0200  # number of digital inputs
-REG_OUTPUT_COUNT = 0x0201  # number of relays
+# JXD bit map, see packages/features/modbus-server.yaml. Coils and discrete inputs share
+# one bit address space in upstream modbus_server, so the two blocks are disjoint.
+COILS_BASE = 0x0000  # relays, FC 0x01/0x05/0x0F
+DISCRETE_BASE = 0x0010  # digital inputs, FC 0x02
 
 EXCEPTIONS = {
     0x01: "ILLEGAL_FUNCTION",
     0x02: "ILLEGAL_DATA_ADDRESS",
     0x03: "ILLEGAL_DATA_VALUE",
-    0x04: "SERVICE_DEVICE_FAILURE",
+    0x04: "SERVER_DEVICE_FAILURE",
     0x05: "ACKNOWLEDGE",
     0x06: "SERVER_DEVICE_BUSY",
     0x08: "MEMORY_PARITY_ERROR",
@@ -186,14 +185,6 @@ def probe(bus: ModbusRTU) -> int:
     print(f"unit 0x{bus.unit:02X} on {bus.ser.port} @ {bus.ser.baudrate} 8N1\n")
 
     step(
-        f"input count      FC 0x04 @ 0x{REG_INPUT_COUNT:04X}",
-        lambda: bus.read_input_registers(REG_INPUT_COUNT, 1)[0],
-    )
-    step(
-        f"output count     FC 0x04 @ 0x{REG_OUTPUT_COUNT:04X}",
-        lambda: bus.read_input_registers(REG_OUTPUT_COUNT, 1)[0],
-    )
-    step(
         f"relays           FC 0x01 @ 0x{COILS_BASE:04X} x6",
         lambda: fmt_bits(bus.read_coils(COILS_BASE, 6)),
     )
@@ -202,12 +193,12 @@ def probe(bus: ModbusRTU) -> int:
         lambda: fmt_bits(bus.read_discrete_inputs(DISCRETE_BASE, 6)),
     )
     step(
-        f"holding regs     FC 0x03 @ 0x{REG_INPUT_COUNT:04X} x2",
-        lambda: bus.read_holding_registers(REG_INPUT_COUNT, 2),
+        "courtesy regs    FC 0x03 @ 0x0000 x2",
+        lambda: bus.read_holding_registers(0x0000, 2),
     )
     step(
-        "unmapped coil    FC 0x01 @ 0x0000",
-        lambda: fmt_bits(bus.read_coils(0x0000, 1)),
+        "unmapped bit     FC 0x01 @ 0x0100",
+        lambda: fmt_bits(bus.read_coils(0x0100, 1)),
     )
     return failures
 
@@ -266,7 +257,7 @@ def main() -> int:
     p.add_argument("value", type=auto_int)
 
     p = sub.add_parser(
-        "write-coils", help="FC 0x0F, e.g. write-coils 0xA000 1 0 1 0 1 0"
+        "write-coils", help="FC 0x0F, e.g. write-coils 0x0000 1 0 1 0 1 0"
     )
     p.add_argument("address", type=auto_int)
     p.add_argument("values", type=auto_int, nargs="+")

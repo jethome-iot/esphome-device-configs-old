@@ -2,22 +2,25 @@
 
 Guide for adding Dallas DS18B20 temperature sensors to your device.
 
+The 1-Wire bus is driven by a DS2484 I²C-to-1-Wire bridge at address `0x18`
+(`packages/boards/jxd-d6-r6-rev1.2.yaml`), so sensors are found on that bus rather than
+on a bit-banged GPIO.
+
 ## Step 1: Find Sensor Address
 
 Connect DS18B20 sensor(s) to the onewire connector, then check logs:
 
 ```
-[15:45:33.923][C][gpio.one_wire:021]: GPIO 1-wire bus:
-[15:45:33.929][C][gpio.one_wire:022]:   Pin: GPIO15
-[15:45:33.934][C][gpio.one_wire:084]:   Found devices:
-[15:45:33.940][C][gpio.one_wire:086]:     0xeb01227905460228 (DS18B20)
+[15:45:33.923][C][ds2484:021]: DS2484 1-wire bus:
+[15:45:33.934][C][ds2484:084]:   Found devices:
+[15:45:33.940][C][ds2484:086]:     0xeb01227905460228 (DS18B20)
 ```
 
 Copy the address: `0xeb01227905460228`
 
-## Step 2: Add to Configuration
+## Step 2: Add the Sensor
 
-Edit `include/jxd-r6-one-wire.yaml`:
+Edit `packages/features/temperature.yaml`:
 
 ```yaml
 sensor:
@@ -25,8 +28,7 @@ sensor:
     name: "Temperature"
     id: temperature_sensor
     update_interval: 20s
-  
-  # Add new sensor with discovered address
+
   - platform: dallas_temp
     address: 0xeb01227905460228
     name: "Temperature 2"
@@ -34,49 +36,54 @@ sensor:
     update_interval: 20s
 ```
 
-## Step 3: Add to Group
+With more than one sensor on the bus, give every sensor an explicit `address`
+(or `index`) — otherwise the assignment depends on discovery order.
 
-Edit `include/jxd-r6-e1eth-base.yaml`:
+## Step 3: Add to the `temperatures` global
+
+The status page iterates a global vector of sensor pointers instead of a group.
+Add the new sensor to it in the same file:
 
 ```yaml
-groups:
-  - id: onewire_group_id
-    name: "OneWire Temp"
-    entities:
-      - temperature_sensor
-      - temperature_sensor_2  # Add your sensor ID here
+globals:
+  - id: temperatures
+    type: std::vector<sensor::Sensor *>
+
+esphome:
+  on_boot:
+    - priority: 800
+      then:
+        - lambda: 'id(temperatures) = {id(temperature_sensor), id(temperature_sensor_2)};'
 ```
 
-## Step 4: Add to Display Menu
+## Step 4: Add to the Display Menu
 
-Edit `include/jxd-r6-e1eth-display.yaml` (around line 94-103):
+Edit `packages/display/menu.yaml`, in the `Temperatures` submenu:
 
 ```yaml
-- type: menu
-  text: "Temperatures"
-  items:
-  - type: value
-    text: !lambda |-
-      return std::string(id(temperature_sensor).get_name());
-    value_lambda: !lambda |-
-      return str_sprintf(": %2.1f°C", id(temperature_sensor).state);
-  
-  # Add new sensor
-  - type: value
-    text: !lambda |-
-      return std::string(id(temperature_sensor_2).get_name());
-    value_lambda: !lambda |-
-      return str_sprintf(": %2.1f°C", id(temperature_sensor_2).state);
+    - type: menu
+      text: "Temperatures"
+      items:
+        - type: label
+          text: !lambda |-
+            return str_sprintf("%s: %2.1f°C", id(temperature_sensor).get_name().c_str(),
+                               id(temperature_sensor).state);
+
+        - type: label
+          text: !lambda |-
+            return str_sprintf("%s: %2.1f°C", id(temperature_sensor_2).get_name().c_str(),
+                               id(temperature_sensor_2).state);
 ```
 
 ## Step 5: Upload Firmware
 
 ```bash
-esphome run JXD/jxd-r6-e1eth-lcd-eth.yaml
+esphome run jxd-r6-e1eth-lcd-eth.yaml
 ```
 
 The sensor will now appear in Home Assistant and on the device display.
 
 ## Hardware Connection
 
-Connect DS18B20 sensors to the onewire connector on the device. Multiple sensors can be connected in parallel on the same bus.
+Connect DS18B20 sensors to the onewire connector on the device. Multiple sensors
+can be connected in parallel on the same bus.

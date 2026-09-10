@@ -1,0 +1,40 @@
+substitutions:
+  name: "jxd-r6-e1eth-lcd-eth"
+  friendly_name: JXD-R6-E1ETH-LCD
+  version: 1.0.0
+
+packages:
+  board: !include packages/boards/jxd-cpu-e1eth.yaml
+  relay_board: !include packages/boards/jxd-d6-r6-rev1.2.yaml
+  i2c: !include packages/features/i2c.yaml
+  uarts: !include packages/features/uarts.yaml
+  temperature: !include packages/features/temperature.yaml
+  rtc_time: !include packages/features/rtc-time.yaml
+  vin_measure: !include packages/features/vin-measure.yaml
+  modbus: !include packages/features/modbus-server.yaml
+  display_off: !include packages/features/display-off.yaml
+  display: !include packages/display/display.yaml
+  status_page: !include packages/display/status-page.yaml
+  time_page: !include packages/display/time-page.yaml
+  blank_page: !include packages/display/blank-page.yaml
+  menu: !include packages/display/menu.yaml
+  buttons: !include packages/display/buttons.yaml
+  ethernet: !include packages/features/ethernet.yaml
+  menu_items: !include packages/display/menu-items-eth.yaml
+
+esphome:
+  name: ${name}
+  name_add_mac_suffix: true
+  friendly_name: ${friendly_name}
+  project:
+    name: JetHub.JXD R6-E1ETH-LCD
+    version: ${version}
+  on_boot:
+    - priority: 600
+      then:
+        - delay: 200ms
+        - script.execute: setup_time
+
+dashboard_import:
+  package_import_url: github://jethome-iot/esphome-device-configs/dist/jxd-r6-e1eth-lcd-eth.yaml@master
+  import_full_config: true

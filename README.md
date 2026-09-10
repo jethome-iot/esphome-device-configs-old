@@ -2,45 +2,77 @@
 
 ![ESPHome](https://img.shields.io/badge/ESPHome-2026.8.2-blue)
 
-This repository contains ESPHome configurations for various automation devices, including custom components for enhanced functionality. These are **open-source firmware configurations** that you can customize and build yourself.
+This repository contains ESPHome configurations for various automation devices. These are **open-source firmware configurations** that you can customize and build yourself.
 
 ## Supported Devices
 
 ### JXD-R6-E1ETH-LCD
+
 JetHome DIN-rail automation controller with display. For a proprietary firmware version with additional features and support, visit [JetHome official website](https://jethome.com/).
 
 **Configurations**:
-- `JXD/jxd-r6-e1eth-lcd-eth.yaml` - Ethernet variant
-- `JXD/jxd-r6-e1eth-lcd-wifi.yaml` - WiFi variant
+
+- `jxd-r6-e1eth-lcd-eth.yaml` - Ethernet variant
+- `jxd-r6-e1eth-lcd-wifi.yaml` - WiFi variant
 
 ## JXD-R6-E1ETH-LCD Features
 
 The JXD-R6-E1ETH-LCD is a powerful DIN-rail automation controller with the following capabilities:
 
 ### Hardware
-- **ESP32** microcontroller with 8MB flash and PSRAM
+
+- **ESP32** microcontroller with 16MB flash and PSRAM
 - **6 Relay outputs** via PCA9554 I/O expander
 - **6 Digital inputs** via PCA9554 I/O expander
 - **OLED Display**: SSD1306/SH1106 128x64 pixels with interactive menu
 - **RTC**: PCF8563 hardware real-time clock with battery backup
-- **Temperature monitoring**: Onboard TMP102 sensor + Dallas DS18B20 OneWire support
+- **Temperature monitoring**: Onboard TMP102 sensor + Dallas DS18B20 over a DS2484 I²C-to-1-Wire bridge
 - **Connectivity**: LAN8720 Ethernet or WiFi (ESP32 built-in)
 - **Voltage monitoring**: Input voltage measurement
 - **RS485/Modbus**: 2x UART interfaces for Modbus RTU communication
 
 ### Software Features
 
-- **RTC Time Synchronization**: Hardware RTC with NTP sync and battery backup
-- **Modbus RTU Server**: Acts as Modbus slave with automatic group-based configuration (coils, discrete inputs, holding registers)
+- **RTC Time Synchronization**: Hardware RTC with battery backup, synced from Home Assistant or NTP, timezone included
+- **Modbus RTU Server**: Acts as Modbus slave, mapping relays to coils and digital inputs to discrete inputs
 - **Home Assistant Integration**: Native ESPHome API with automatic entity discovery and OTA updates
-- **Display Control**: Interactive OLED menu with status, time, relay control, inputs monitoring, and settings
+- **Display Control**: Interactive OLED menu with status, time, relay control, input monitoring, and settings
 - **Dallas Temperature Sensors**: OneWire support for multiple DS18B20 sensors ([setup guide](doc/ONEWIRE_WORKFLOW.md))
+
+## Repository Layout
+
+Device configurations live in the repository root (`jxd-r6-e1eth-lcd-eth.yaml`,
+`jxd-r6-e1eth-lcd-wifi.yaml`) and are thin: they set substitutions and list the packages
+that make up the device. Everything else lives under `packages/`, split by role:
+
+| Directory            | Contents                                                                                                                                                                                                               |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/boards/`   | Platform and the chips sitting on each board — `jxd-cpu-e1eth.yaml` (ESP32, api/ota/logger/web_server, TMP102, LED, FN button) and `jxd-d6-r6-rev1.2.yaml` (PCA9554 expander, 6 relays, 6 inputs, DS2484 1-Wire bridge) |
+| `packages/features/` | SoC buses (`i2c.yaml`, `uarts.yaml`) and functionality — `temperature`, `rtc-time`, `vin-measure`, `modbus-server`, `display-off`, `ethernet`, `wifi`                                                                   |
+| `packages/display/`  | Display, pages, menu and buttons — `display.yaml`, `menu.yaml`, `buttons.yaml`, `menu-items-eth.yaml`, `menu-items-wifi.yaml`                                                                                           |
+
+The BDF display fonts in `fonts/` come from [IT-Studio-Rech/bdf-fonts](https://github.com/IT-Studio-Rech/bdf-fonts).
+
+### Generated configs (`dist/`)
+
+`dist/` is what the ESPHome Builder add-on imports; build and flash locally from the
+device configs in the repository root. Nothing here is edited by hand — regenerate and
+commit it after changing anything a device config pulls in:
+
+```bash
+python scripts/build-dist.py           # regenerate
+python scripts/build-dist.py --check   # fail if stale (pre-commit and CI run this)
+```
+
+`!secret` references are carried into `dist/` rather than resolved, so nothing leaks —
+but importing the WiFi variant means supplying `wifi_ap_ssid` and `wifi_ap_password`
+in Home Assistant's own `secrets.yaml`.
 
 ## Quick Start
 
 ### Requirements
 
-- **Python 3.11 or higher**
+- **Python 3.12, 3.13 or 3.14** (ESPHome 2026.8.2 requires `>=3.12,<3.15`)
 - **ESPHome 2026.8.2** (pinned version for compatibility)
 - USB cable or serial adapter for initial flashing
 - Network connection for OTA updates
@@ -48,41 +80,59 @@ The JXD-R6-E1ETH-LCD is a powerful DIN-rail automation controller with the follo
 ### Installation
 
 1. **Clone this repository**:
-```bash
-git clone <repository-url>
-cd esphome-device-configs
-```
 
-2. **Set up Python environment**:
+   ```bash
+   git clone <repository-url>
+   cd esphome-device-configs
+   ```
 
-**Linux/macOS**:
-```bash
-./scripts/setup.sh
-source .venv/bin/activate
-```
+2. **Set up the Python environment.** Linux/macOS:
 
-**Windows**:
-```cmd
-scripts\setup.bat
-.venv\Scripts\activate
-```
+   ```bash
+   ./scripts/setup.sh
+   source .venv/bin/activate
+   ```
+
+   Windows:
+
+   ```cmd
+   scripts\setup.bat
+   .venv\Scripts\activate
+   ```
+
+3. **Create your secrets file**:
+
+   ```bash
+   cp secrets.yaml.example secrets.yaml
+   ```
+
+`secrets.yaml` is gitignored and never leaves your machine; `secrets.yaml.example`
+is the tracked template listing every key the configs expect. Only the WiFi variant
+reads secrets — it needs the fallback access point's SSID and password. A missing
+file stops the build at `Error reading file secrets.yaml: [Errno 2] No such file or
+directory`; a file that is present but missing a key, at `Secret 'wifi_ap_ssid' not
+defined`. The Ethernet variant builds without a `secrets.yaml` at all.
 
 ### Configuration Variants
 
 The repository provides two configuration variants:
 
 #### Ethernet Version
+
 ```bash
-esphome run JXD/jxd-r6-e1eth-lcd-eth.yaml
+esphome run jxd-r6-e1eth-lcd-eth.yaml
 ```
+
 - Uses LAN8720 Ethernet controller
 - Static or DHCP IP configuration
 - Best for industrial/stable installations
 
 #### WiFi Version
+
 ```bash
-esphome run JXD/jxd-r6-e1eth-lcd-wifi.yaml
+esphome run jxd-r6-e1eth-lcd-wifi.yaml
 ```
+
 - Uses ESP32 built-in WiFi
 - Captive portal for easy setup
 - WiFi credentials stored in device
@@ -90,17 +140,15 @@ esphome run JXD/jxd-r6-e1eth-lcd-wifi.yaml
 
 ### Timezone
 
-The device gets its timezone from Home Assistant and keeps it across reboots, so local
-time stays correct even when it boots without HA.
-
-Until HA is reachable the firmware uses a compiled-in timezone. By default that is the
-timezone of the machine doing the build — pin it explicitly for reproducible builds:
+The device takes its timezone from Home Assistant on connect and keeps it across
+reboots. Until it is paired it runs on the zone compiled into the firmware, `UTC`
+by default — set that for a device that runs standalone:
 
 ```bash
-esphome -s timezone UTC run JXD/jxd-r6-e1eth-lcd-eth.yaml
+esphome -s timezone Europe/Berlin run jxd-r6-e1eth-lcd-eth.yaml
 ```
 
-or per device in `JXD/*.yaml`:
+or per device in the device config:
 
 ```yaml
 substitutions:
@@ -113,153 +161,117 @@ are accepted. POSIX strings per zone: [posix_tz_db](https://github.com/nayarsyst
 ### First Flash
 
 For the first flash, connect via USB:
+
 ```bash
-esphome run JXD/jxd-r6-e1eth-lcd-eth.yaml
+esphome run jxd-r6-e1eth-lcd-eth.yaml
 # or
-esphome run JXD/jxd-r6-e1eth-lcd-wifi.yaml
+esphome run jxd-r6-e1eth-lcd-wifi.yaml
 ```
 
 Subsequent updates can be done over-the-air (OTA):
+
 ```bash
-esphome run JXD/jxd-r6-e1eth-lcd-eth.yaml --device <IP_ADDRESS>
+esphome run jxd-r6-e1eth-lcd-eth.yaml --device <IP_ADDRESS>
 ```
 
-### WiFi Setup (WiFi Version Only)
+### WiFi Setup (WiFi version only)
 
-The WiFi version supports easy configuration through a captive portal:
-
-#### Initial Setup
-
-1. **Flash the firmware** via USB using the WiFi configuration
-2. **Device creates Access Point**:
-   - SSID: `JXD-R6-E1ETH-LCD-XXXX` (where XXXX is last 2 bytes of MAC address)
-   - Password: Last 4 bytes of MAC address (8 hex digits)
-   - Example: If MAC is `AA:BB:CC:DD:EE:FF`, SSID will be `JXD-R6-E1ETH-LCD-EEFF` with password `ccddeeff`
-
-3. **Connect to the AP**:
-   - Use your phone or laptop to connect to the device's WiFi network
-   - You can view the MAC address in the device display menu: **Menu → Info → MAC**
-   
-4. **Configure WiFi**:
-   - Your device will show a captive portal notification suggesting to open WiFi settings
-   - Tap the notification or manually navigate to `http://192.168.4.1`
-   - The captive portal will display a list of available WiFi networks
-   - Select your WiFi network from the list
-   - Enter your WiFi password
-   - Click "Save"
-
-5. **Device connects**:
-   - Device will disconnect from AP mode
-   - Connects to your WiFi network
-   - IP address displayed on device screen
-   - Device now accessible via Home Assistant and web interface
-
-#### Changing WiFi Settings
-
-You can change WiFi configuration in two ways:
-
-**Method 1: Via Display Menu (WiFi version)**
-1. Press the Menu button to open the display menu
-2. Navigate to: **Settings → Reset WiFi creds → Yes**
-3. Device clears stored WiFi credentials and reboots in AP mode
-4. Reconfigure WiFi using the captive portal (see Initial Setup above)
-
-**Method 2: Via Configuration File**
-1. Edit `include/wifi.yaml` to set default credentials
-2. Recompile and upload firmware:
-```bash
-esphome run JXD/jxd-r6-e1eth-lcd-wifi.yaml --device <IP_ADDRESS>
-```
-
-**Method 3: Factory Reset**
-1. Open display menu: **Settings → Factory reset → Yes**
-2. This clears all stored data including WiFi credentials
-3. Device reboots and creates AP for reconfiguration
-
-#### WiFi AP Details
-
-The Access Point is automatically created using device MAC address:
-- **SSID Format**: `${friendly_name}-${MAC_SUFFIX}`
-- **Password Format**: Last 4 MAC bytes (8 hex characters)
-- **Timeout**: AP activates if no WiFi connection after 5 seconds
-- **IP Address**: Device accessible at `192.168.4.1` when in AP mode
+The WiFi variant ships without network credentials: it raises a fallback access point and
+is provisioned through its captive portal. See [WiFi Setup](doc/WIFI_SETUP.md).
 
 ## Display UI Overview
 
-The device features an interactive OLED display with multiple pages accessible via the menu button:
+Four pages plus a menu. The main page is what you get at boot and after HOME; everything
+else is one button away from it.
 
 ### Main Page
+
 <img src="images/jxd-r6-main-page-ui.svg" width="400" alt="Main Page">
 
 Shows device name, uptime, input voltage, and IP address.
 
+**Getting here**: HOME from anywhere, or BACK from another page.
+
 ### Status Page
+
 <img src="images/jxd-r6-status-page-ui.svg" width="400" alt="Status Page">
 
-Shows system status and diagnostic information.
+Relay states, digital input states and temperature readings at a glance, and it switches
+the relays: LEFT and RIGHT move the selection along the relay row — the selected number is
+drawn inverted on the device — and CENTER toggles that relay.
+
+**Getting here**: LEFT from the main page.
 
 ### Time Page
+
 <img src="images/jxd-r6-time-page-ui.svg" width="400" alt="Time Page">
 
-Displays current date and time from the hardware RTC.
+Current date and time from the hardware RTC.
 
-### Relays Control Page
-<img src="images/jxd-r6-relays-page-ui.svg" width="400" alt="Relays Page">
+**Getting here**: RIGHT from the main page.
 
-View and control relay states directly from the display.
+### Menu
 
-### Digital Inputs Page
-<img src="images/jxd-r6-inputs-page-ui.svg" width="400" alt="Inputs Page">
-
-Monitor the status of all 6 digital inputs in real-time.
-
-### Menu Navigation
 <img src="images/jxd-r6-menu-ui.svg" width="400" alt="Menu">
 
-Interactive menu for accessing temperatures, device info, and settings including:
-- Temperature sensors display
-- Network information (IP, MAC address)
-- Display settings (auto-off timer)
-- WiFi configuration (WiFi version only - Reset WiFi credentials)
-- Factory reset
-- Device reboot
+- **Relays** - toggle each of the 6 relays
+- **Inputs** - live state of the 6 digital inputs
+- **Temperatures** - temperature sensor readings
+- **Info** - network information (IP, MAC address)
+- **Settings** - display auto-off timer, WiFi credential reset (WiFi version only), factory reset, reboot
+
+**Getting here**: CENTER from the main page.
+
+### Blank Screen
+
+The display blanks after the inactivity timeout (**Settings → Display off**: 5, 10 or 15
+minutes, or never). Any button wakes it — LEFT lands on the status page, RIGHT on the time
+page, anything else on the main page.
+
+**Getting here**: BACK from the main page, or wait out the timer.
+
+### Buttons
+
+| Button      | Effect                                                                                    |
+| ----------- | ----------------------------------------------------------------------------------------- |
+| `HOME`      | Main page, from anywhere                                                                  |
+| `BACK`      | Main page; from the main page blanks the screen; in the menu goes up one level, then exits |
+| `LEFT`      | Main page → status page; on the status page selects the previous relay; adjusts menu values |
+| `RIGHT`     | Main page → time page; on the status page selects the next relay; adjusts menu values      |
+| `CENTER`    | Main page → menu; on the status page toggles the selected relay; in the menu enters        |
+| `UP` `DOWN` | Move through the menu                                                                      |
 
 ## Documentation
 
 - **[OneWire Workflow Guide](doc/ONEWIRE_WORKFLOW.md)**: Step-by-step guide for adding Dallas DS18B20 temperature sensors
-- **[Components Documentation](doc/COMPONENTS.md)**: Details about custom and modified ESPHome components used in this project
-
-## Custom Components
-
-This project includes several custom and modified ESPHome components:
-
-1. **groups**: Entity grouping system for organizing relays, inputs, and sensors
-2. **modbus_server_group**: Automatic Modbus server configuration from entity groups
-3. **display_menu_base**: Enhanced menu system with additional navigation options
-4. **graphical_display_menu**: OLED menu renderer with value display support
-5. **modbus_controller**: Enhanced with server mode, coils, and discrete inputs support
-
-See [Components Documentation](doc/COMPONENTS.md) for detailed information.
+- **[WiFi Setup](doc/WIFI_SETUP.md)**: Provisioning the WiFi variant through its captive portal
 
 ## Modbus RTU Server
 
 The device can act as a Modbus RTU server (slave) for integration with PLCs, SCADA systems, and other industrial automation equipment:
 
 - **Slave Address**: 0x01 (configurable)
-- **Baud Rate**: Configurable via UART settings
-- **Coils** (0xA000+): Read/write relay states
-- **Discrete Inputs** (0xA000+): Read digital input states
-- **Holding Registers**: Device information and configuration
+- **Baud Rate**: Configurable via UART settings (`packages/features/uarts.yaml`, `jxm_uart2`)
+- **Coils** `0x0000`-`0x0005` (FC 0x01/0x05/0x0F): read/write relay 1-6
+- **Discrete Inputs** `0x0010`-`0x0015` (FC 0x02): read digital input 1-6
+- **Holding/input registers**: none mapped; a courtesy response answers `0` instead of an exception
+
+Upstream `modbus_server` keeps coils and discrete inputs in a single bit address space, so
+the two blocks are placed at different offsets rather than both starting at zero.
 
 **RS-485 Connector (JXM2)**:
+
 - Pin 1: B
 - Pin 2: A
 - Pin 3: B
 - Pin 4: A
 
-Configuration example in `include/jxd-jxm-modbus-auto.yaml` uses the automatic group-based mapping for simple setup.
+The map is defined in `packages/features/modbus-server.yaml`. `scripts/modbus_probe.py` walks the
+whole map over RS485 for a quick check:
 
-For detailed information about the automatic Modbus server configuration, see the [modbus_server_group component documentation](components/modbus_server_group/README.md).
+```bash
+.venv/bin/python scripts/modbus_probe.py --port /dev/ttyUSB2 probe
+```
 
 ## Contributing
 
@@ -278,6 +290,6 @@ This project is open-source.
 ## Support
 
 For issues related to:
+
 - **Open-source firmware**: Use GitHub issues in this repository
 - **Hardware or proprietary firmware**: Contact [JetHome support](mailto:sales@jethome.com)
-

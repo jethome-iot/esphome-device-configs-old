@@ -11,22 +11,12 @@ repos:
         args: [--fix]
       # Run the formatter.
       - id: ruff-format
-  - repo: https://github.com/PyCQA/flake8
-    rev: 7.2.0
-    hooks:
-      - id: flake8
-        additional_dependencies:
-          - flake8-docstrings==1.7.0
-          - pydocstyle==5.1.1
-        files: ^(esphome|tests)/.+\.py$
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v3.4.0
+    rev: v5.0.0
     hooks:
       - id: no-commit-to-branch
         args:
-          - --branch=dev
-          - --branch=release
-          - --branch=beta
+          - --branch=master
   - repo: https://github.com/asottile/pyupgrade
     rev: v3.20.0
     hooks:
@@ -36,15 +26,18 @@ repos:
     rev: v1.37.1
     hooks:
       - id: yamllint
-  - repo: https://github.com/pre-commit/mirrors-clang-format
-    rev: v13.0.1
-    hooks:
-      - id: clang-format
-        types_or: [c, c++]
+        # Generated output: the blank lines inside block scalars are ESPHome's
+        # dumper's doing, not ours.
+        exclude: ^dist/
   - repo: local
     hooks:
-      - id: pylint
-        name: pylint
-        entry: python3 script/run-in-env.py pylint
-        language: system
-        types: [python]
+      # Rewrites dist/, so a stale copy fails the commit until it is staged.
+      # Keep the esphome pin in step with requirements.txt: a different version
+      # here would generate a different dist/ than CI does.
+      - id: build-dist
+        name: regenerate dist/
+        entry: python scripts/build-dist.py
+        language: python
+        additional_dependencies: [esphome==2026.8.2]
+        pass_filenames: false
+        files: ^(jxd-.*\.yaml|packages/|scripts/build-dist\.py)

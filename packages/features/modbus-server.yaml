@@ -1,0 +1,97 @@
+# RS485 bus. Baud rate and pins: packages/features/uarts.yaml.
+modbus:
+  - id: modbus_bus
+    uart_id: jxm_uart2
+    role: server
+
+# FC 0x01 and FC 0x02 read one shared bit table, so a bit counts as a coil or
+# as a discrete input only by having a write_lambda or not:
+#
+#   0x0000-0x0005  relays 1-6, read/write
+#   0x0010-0x0015  inputs 1-6, read only
+#
+# Registers are not mapped; courtesy_response answers 0 instead of an exception.
+modbus_server:
+  - id: modbus_server1
+    modbus_id: modbus_bus
+    address: 0x01
+    courtesy_response:
+      enabled: true
+    bits:
+      - address: 0x0000
+        read_lambda: 'return id(relay_1).state;'
+        write_lambda: |-
+          if (x) {
+            id(relay_1).turn_on();
+          } else {
+            id(relay_1).turn_off();
+          }
+          return true;
+
+      - address: 0x0001
+        read_lambda: 'return id(relay_2).state;'
+        write_lambda: |-
+          if (x) {
+            id(relay_2).turn_on();
+          } else {
+            id(relay_2).turn_off();
+          }
+          return true;
+
+      - address: 0x0002
+        read_lambda: 'return id(relay_3).state;'
+        write_lambda: |-
+          if (x) {
+            id(relay_3).turn_on();
+          } else {
+            id(relay_3).turn_off();
+          }
+          return true;
+
+      - address: 0x0003
+        read_lambda: 'return id(relay_4).state;'
+        write_lambda: |-
+          if (x) {
+            id(relay_4).turn_on();
+          } else {
+            id(relay_4).turn_off();
+          }
+          return true;
+
+      - address: 0x0004
+        read_lambda: 'return id(relay_5).state;'
+        write_lambda: |-
+          if (x) {
+            id(relay_5).turn_on();
+          } else {
+            id(relay_5).turn_off();
+          }
+          return true;
+
+      - address: 0x0005
+        read_lambda: 'return id(relay_6).state;'
+        write_lambda: |-
+          if (x) {
+            id(relay_6).turn_on();
+          } else {
+            id(relay_6).turn_off();
+          }
+          return true;
+
+      - address: 0x0010
+        read_lambda: 'return id(input_1).state;'
+
+      - address: 0x0011
+        read_lambda: 'return id(input_2).state;'
+
+      - address: 0x0012
+        read_lambda: 'return id(input_3).state;'
+
+      - address: 0x0013
+        read_lambda: 'return id(input_4).state;'
+
+      - address: 0x0014
+        read_lambda: 'return id(input_5).state;'
+
+      - address: 0x0015
+        read_lambda: 'return id(input_6).state;'
