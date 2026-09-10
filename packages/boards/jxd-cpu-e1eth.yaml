@@ -12,6 +12,7 @@ psram:
   speed: 80MHz
 
 api:
+  id: api_server
   encryption:
   reboot_timeout: 15min
 

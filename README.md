@@ -53,6 +53,16 @@ that make up the device. Everything else lives under `packages/`, split by role:
 
 The BDF display fonts in `fonts/` come from [IT-Studio-Rech/bdf-fonts](https://github.com/IT-Studio-Rech/bdf-fonts).
 
+### Generated icons (`res/`)
+
+The main page's status icons. Each one is a 16x16 pixel map in `scripts/build-icons.py`
+and a set of filled rects in the SVG, so nothing is edited by hand here either:
+
+```bash
+python scripts/build-icons.py           # regenerate
+python scripts/build-icons.py --check   # fail if stale (pre-commit and CI run this)
+```
+
 ### Generated configs (`dist/`)
 
 `dist/` is what the ESPHome Builder add-on imports; build and flash locally from the
@@ -188,7 +198,9 @@ else is one button away from it.
 
 <img src="images/jxd-r6-main-page-ui.svg" width="400" alt="Main Page">
 
-Shows device name, uptime, input voltage, and IP address.
+Shows device name, IP address, uptime and input voltage. Two icons in the bottom-right
+corner report the link (Ethernet or WiFi, depending on the config) and the Home Assistant
+API connection; a crossed-out icon means that connection is down.
 
 **Getting here**: HOME from anywhere, or BACK from another page.
 
