@@ -414,6 +414,10 @@ jobs:
             fi
           else
             TAG=$VERSION
+            # Claim the version before anything can fail around it: the
+            # annotated tag is what a retry resolves to, and gh release
+            # create happily reuses a tag that already exists.
+            record_version_tag
             NOTES="ESPHome $ESPHOME firmware $FW_VERSION, built from $SHA."
             PRERELEASE_FLAG=""
             if [ "$CHANNEL" = "nightly" ]; then PRERELEASE_FLAG="--prerelease"; fi
@@ -421,6 +425,5 @@ jobs:
               gh release create "$TAG" --repo "$REPO" --target "$SHA" \
                 --title "$TAG" --notes "$NOTES" $PRERELEASE_FLAG
             gh release upload "$TAG" firmware/* --repo "$REPO" --clobber
-            record_version_tag
           fi
           echo "Attached $(find firmware -maxdepth 1 -type f | wc -l) files to release $TAG" >> "$GITHUB_STEP_SUMMARY"
