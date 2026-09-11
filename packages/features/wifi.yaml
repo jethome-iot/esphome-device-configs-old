@@ -1,3 +1,18 @@
+# The main page's link icon, and the C++ expression that picks its state.
+substitutions:
+  link_connected: id(wifi_id).is_connected()
+
+image:
+  - platform: file
+    file: res/wifi.svg
+    id: icon_link
+    type: BINARY
+
+  - platform: file
+    file: res/wifi-off.svg
+    id: icon_link_off
+    type: BINARY
+
 wifi:
   id: wifi_id
   reboot_timeout: 5min

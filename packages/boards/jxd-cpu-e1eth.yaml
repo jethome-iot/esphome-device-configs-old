@@ -12,6 +12,7 @@ psram:
   speed: 80MHz
 
 api:
+  id: api_server
   encryption:
   reboot_timeout: 15min
 
@@ -39,15 +40,6 @@ switch:
     name: "Red led"
     id: red_led
     pin: GPIO2
-
-binary_sensor:
-  - platform: gpio
-    name: "FN button"
-    id: fn_button
-    internal: true
-    pin:
-      number: GPIO0
-      inverted: true
 
 text_sensor:
   - platform: uptime

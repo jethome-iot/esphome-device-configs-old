@@ -23,7 +23,7 @@ jobs:
     outputs:
       configs: ${{ steps.list.outputs.configs }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v5
         with:
@@ -57,9 +57,9 @@ jobs:
       matrix:
         config: ${{ fromJson(needs.discover.outputs.configs) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
           cache: pip
@@ -71,7 +71,7 @@ jobs:
       # The ESP-IDF toolchain is ~2 GB and identical across configs, so key the
       # cache on the ESPHome pin rather than on the config being built.
       - name: Cache toolchains
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.platformio
@@ -91,9 +91,9 @@ jobs:
     name: Check dist/ is current
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
           cache: pip
@@ -116,9 +116,9 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
           cache: pip
@@ -128,7 +128,7 @@ jobs:
         run: pip install -r requirements-dev.txt
 
       - name: Cache hook environments
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/pre-commit
           key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}

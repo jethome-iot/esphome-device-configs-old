@@ -47,7 +47,7 @@ that make up the device. Everything else lives under `packages/`, split by role:
 
 | Directory            | Contents                                                                                                                                                                                                               |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/boards/`   | Platform and the chips sitting on each board — `jxd-cpu-e1eth.yaml` (ESP32, api/ota/logger/web_server, TMP102, LED, FN button) and `jxd-d6-r6-rev1.2.yaml` (PCA9554 expander, 6 relays, 6 inputs, DS2484 1-Wire bridge) |
+| `packages/boards/`   | Platform and the chips sitting on each board — `jxd-cpu-e1eth.yaml` (ESP32, api/ota/logger/web_server, TMP102, LED) and `jxd-d6-r6-rev1.2.yaml` (PCA9554 expander, 6 relays, 6 inputs, DS2484 1-Wire bridge) |
 | `packages/features/` | SoC buses (`i2c.yaml`, `uarts.yaml`) and functionality — `temperature`, `rtc-time`, `vin-measure`, `modbus-server`, `display-off`, `ethernet`, `wifi`                                                                   |
 | `packages/display/`  | Display, pages, menu and buttons — `display.yaml`, `menu.yaml`, `buttons.yaml`, `menu-items-eth.yaml`, `menu-items-wifi.yaml`                                                                                           |
 
@@ -57,6 +57,16 @@ The firmwares this repository builds are listed in `firmwares.yaml` — the sing
 source of truth for CI and for the release pipeline, with a per-firmware flag
 for publishing to [fw.jethome.com](https://fw.jethome.com). See the
 [Release Workflow](doc/RELEASE.md).
+
+### Generated icons (`res/`)
+
+The main page's status icons. Each one is a 16x16 pixel map in `scripts/build-icons.py`
+and a set of filled rects in the SVG, so nothing is edited by hand here either:
+
+```bash
+python scripts/build-icons.py           # regenerate
+python scripts/build-icons.py --check   # fail if stale (pre-commit and CI run this)
+```
 
 ### Generated configs (`dist/`)
 
@@ -193,7 +203,9 @@ else is one button away from it.
 
 <img src="images/jxd-r6-main-page-ui.svg" width="400" alt="Main Page">
 
-Shows device name, uptime, input voltage, and IP address.
+Shows device name, IP address, uptime and input voltage. Two icons in the bottom-right
+corner report the link (Ethernet or WiFi, depending on the config) and the Home Assistant
+API connection; a crossed-out icon means that connection is down.
 
 **Getting here**: HOME from anywhere, or BACK from another page.
 

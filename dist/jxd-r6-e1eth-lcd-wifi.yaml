@@ -12,6 +12,7 @@ psram:
   mode: quad
   speed: 80MHz
 api:
+  id: api_server
   encryption: null
   reboot_timeout: 15min
 ota:
@@ -182,14 +183,33 @@ switch:
       number: 5
       mode:
         output: true
-binary_sensor:
-  - platform: gpio
-    name: FN button
-    id: fn_button
+text_sensor:
+  - platform: uptime
+    name: Uptime
+    id: uptime_sensor
     internal: true
-    pin:
-      number: GPIO0
-      inverted: true
+    format:
+      separator: ' '
+  - platform: wifi_info
+    ip_address:
+      name: WiFi IP
+      id: ip
+    mac_address:
+      name: WiFi MAC
+      id: mac_wifi
+pca9554:
+  - id: jxd_d6_r6_exp
+    pin_count: 16
+    address: 34
+  - id: jxd_display_exp
+    pin_count: 16
+    address: 36
+one_wire:
+  - platform: ds2484
+    id: one_wire_bus
+    address: 24
+    active_pullup: true
+binary_sensor:
   - platform: gpio
     name: Input 1
     id: input_1
@@ -353,32 +373,6 @@ binary_sensor:
           \ id(display1).show_page(id(main_page));\n} else if (page == id(main_page))\
           \ {\n  id(display1).show_page(id(blank_page));\n} else {\n  id(display1).show_page(id(main_page));\n\
           }"
-text_sensor:
-  - platform: uptime
-    name: Uptime
-    id: uptime_sensor
-    internal: true
-    format:
-      separator: ' '
-  - platform: wifi_info
-    ip_address:
-      name: WiFi IP
-      id: ip
-    mac_address:
-      name: WiFi MAC
-      id: mac_wifi
-pca9554:
-  - id: jxd_d6_r6_exp
-    pin_count: 16
-    address: 34
-  - id: jxd_display_exp
-    pin_count: 16
-    address: 36
-one_wire:
-  - platform: ds2484
-    id: one_wire_bus
-    address: 24
-    active_pullup: true
 globals:
   - id: relays
     type: std::vector<switch_::Switch *>
@@ -421,14 +415,20 @@ esphome:
             // A YAML address pins its slot; the stored table follows it.\nfor (size_t\
             \ i = 0; i < std::size(slots); i++) {\n  uint64_t pinned = std::strtoull(sensors[i]->get_address_name().c_str(),\
             \ nullptr, 16);\n  if (pinned == 0)\n    continue;\n  std::replace(std::begin(slots),\
-            \ end, pinned, (uint64_t) 0);\n  slots[i] = pinned;\n}\nfor (uint64_t\
-            \ address : id(one_wire_bus).get_devices()) {\n  if (std::find(std::begin(slots),\
-            \ end, address) != end)\n    continue;\n  auto *slot = std::find(std::begin(slots),\
-            \ end, 0);\n  if (slot == end) {\n    ESP_LOGW(\"temperature\", \"No free\
-            \ slot for 0x%016\" PRIx64, address);\n    continue;\n  }\n  *slot = address;\n\
-            }\nfor (size_t i = 0; i < std::size(slots); i++) {\n  if (slots[i] !=\
-            \ 0) {\n    sensors[i]->set_address(slots[i]);\n  } else {\n    sensors[i]->set_index(std::size(slots));\
-            \  // out of range on purpose: an empty slot takes no device\n  }\n}"
+            \ end, pinned, (uint64_t) 0);\n  slots[i] = pinned;\n}\n// The scan finds\
+            \ every 1-Wire device; only these families read back\n// as a DS18B20\
+            \ scratchpad.\nconst uint8_t families[] = {0x10, 0x22, 0x28, 0x3b, 0x42};\n\
+            auto *families_end = std::end(families);\nfor (uint64_t address : id(one_wire_bus).get_devices())\
+            \ {\n  if (std::find(std::begin(families), families_end, address & 0xff)\
+            \ == families_end) {\n    ESP_LOGW(\"temperature\", \"Not a temperature\
+            \ sensor, skipping 0x%016\" PRIx64, address);\n    continue;\n  }\n  if\
+            \ (std::find(std::begin(slots), end, address) != end)\n    continue;\n\
+            \  auto *slot = std::find(std::begin(slots), end, 0);\n  if (slot == end)\
+            \ {\n    ESP_LOGW(\"temperature\", \"No free slot for 0x%016\" PRIx64,\
+            \ address);\n    continue;\n  }\n  *slot = address;\n}\nfor (size_t i\
+            \ = 0; i < std::size(slots); i++) {\n  if (slots[i] != 0) {\n    sensors[i]->set_address(slots[i]);\n\
+            \  } else {\n    sensors[i]->set_index(std::size(slots));  // out of range\
+            \ on purpose: an empty slot takes no device\n  }\n}"
     - priority: 700
       then:
         - lambda: 'id(modbus_server1).set_address((uint8_t) id(modbus_address).state);
@@ -687,6 +687,23 @@ font:
     id: f5x7
   - file: https://raw.githubusercontent.com/jethome-iot/esphome-device-configs/master/fonts/spleen-12x24.bdf
     id: big_label_font
+image:
+  - platform: file
+    file: https://raw.githubusercontent.com/jethome-iot/esphome-device-configs/master/res/ha.svg
+    id: icon_ha
+    type: BINARY
+  - platform: file
+    file: https://raw.githubusercontent.com/jethome-iot/esphome-device-configs/master/res/ha-off.svg
+    id: icon_ha_off
+    type: BINARY
+  - platform: file
+    file: https://raw.githubusercontent.com/jethome-iot/esphome-device-configs/master/res/wifi.svg
+    id: icon_link
+    type: BINARY
+  - platform: file
+    file: https://raw.githubusercontent.com/jethome-iot/esphome-device-configs/master/res/wifi-off.svg
+    id: icon_link_off
+    type: BINARY
 display:
   - platform: ssd1306_i2c
     id: display1
@@ -712,15 +729,24 @@ display:
 
           y += row_size;
 
+          it.printf(0, y, id(f6x12), "IP: %s", id(ip).state.c_str());
+
+          y += row_size;
+
           it.printf(0, y, id(f6x12), "UP: %s", id(uptime_sensor).state.c_str());
 
           y += row_size;
 
           it.printf(0, y, id(f6x12), "VIN: %2.1fV", id(input_voltage).state);
 
-          y += row_size;
 
-          it.printf(0, y, id(f6x12), "IP: %s", id(ip).state.c_str());'
+          // Status icons share the bottom row, to the right of the VIN reading:
+
+          // centred on the row''s cap height, and off the screen edge.
+
+          it.image(88, 45, ${link_connected} ? id(icon_link) : id(icon_link_off));
+
+          it.image(109, 45, id(api_server).is_connected() ? id(icon_ha) : id(icon_ha_off));'
   - platform: ssd1306_i2c
     id: !extend 'display1'
     pages:
@@ -826,6 +852,12 @@ graphical_display_menu:
     - type: menu
       text: Temperatures
       items:
+        - type: label
+          text: !lambda |-
+            auto *s = id(pcb_temp);
+            if (std::isnan(s->state))
+              return str_sprintf("%s: --", s->get_name().c_str());
+            return str_sprintf("%s: %.1f°C", s->get_name().c_str(), s->state);
         - type: label
           text: !lambda |-
             auto *s = id(temp_1);
@@ -1125,6 +1157,7 @@ dashboard_import:
   import_full_config: true
 substitutions:
   timezone: UTC
+  link_connected: id(wifi_id).is_connected()
   name: jxd-r6-e1eth-lcd-wifi
   friendly_name: JXD-R6-E1ETH-LCD
   version: 1.0.0
