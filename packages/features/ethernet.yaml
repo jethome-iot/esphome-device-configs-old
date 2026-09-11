@@ -3,11 +3,13 @@ substitutions:
   link_connected: id(ethernet_id).is_connected()
 
 image:
-  - file: res/ethernet.svg
+  - platform: file
+    file: res/ethernet.svg
     id: icon_link
     type: BINARY
 
-  - file: res/ethernet-off.svg
+  - platform: file
+    file: res/ethernet-off.svg
     id: icon_link_off
     type: BINARY
 

@@ -13,11 +13,13 @@ font:
 
 # The link icons come with the connectivity package: packages/features/{ethernet,wifi}.yaml.
 image:
-  - file: res/ha.svg
+  - platform: file
+    file: res/ha.svg
     id: icon_ha
     type: BINARY
 
-  - file: res/ha-off.svg
+  - platform: file
+    file: res/ha-off.svg
     id: icon_ha_off
     type: BINARY
 

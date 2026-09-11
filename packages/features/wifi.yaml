@@ -3,11 +3,13 @@ substitutions:
   link_connected: id(wifi_id).is_connected()
 
 image:
-  - file: res/wifi.svg
+  - platform: file
+    file: res/wifi.svg
     id: icon_link
     type: BINARY
 
-  - file: res/wifi-off.svg
+  - platform: file
+    file: res/wifi-off.svg
     id: icon_link_off
     type: BINARY
 

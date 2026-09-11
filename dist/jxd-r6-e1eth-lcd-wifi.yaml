@@ -682,16 +682,20 @@ font:
   - file: https://raw.githubusercontent.com/jethome-iot/esphome-device-configs/master/fonts/spleen-12x24.bdf
     id: big_label_font
 image:
-  - file: https://raw.githubusercontent.com/jethome-iot/esphome-device-configs/master/res/ha.svg
+  - platform: file
+    file: https://raw.githubusercontent.com/jethome-iot/esphome-device-configs/master/res/ha.svg
     id: icon_ha
     type: BINARY
-  - file: https://raw.githubusercontent.com/jethome-iot/esphome-device-configs/master/res/ha-off.svg
+  - platform: file
+    file: https://raw.githubusercontent.com/jethome-iot/esphome-device-configs/master/res/ha-off.svg
     id: icon_ha_off
     type: BINARY
-  - file: https://raw.githubusercontent.com/jethome-iot/esphome-device-configs/master/res/wifi.svg
+  - platform: file
+    file: https://raw.githubusercontent.com/jethome-iot/esphome-device-configs/master/res/wifi.svg
     id: icon_link
     type: BINARY
-  - file: https://raw.githubusercontent.com/jethome-iot/esphome-device-configs/master/res/wifi-off.svg
+  - platform: file
+    file: https://raw.githubusercontent.com/jethome-iot/esphome-device-configs/master/res/wifi-off.svg
     id: icon_link_off
     type: BINARY
 display:
