@@ -851,6 +851,12 @@ graphical_display_menu:
       items:
         - type: label
           text: !lambda |-
+            auto *s = id(pcb_temp);
+            if (std::isnan(s->state))
+              return str_sprintf("%s: --", s->get_name().c_str());
+            return str_sprintf("%s: %.1f°C", s->get_name().c_str(), s->state);
+        - type: label
+          text: !lambda |-
             auto *s = id(temp_1);
             if (std::isnan(s->state))
               return str_sprintf("%s: --", s->get_name().c_str());
