@@ -178,6 +178,17 @@ jobs:
             fi
           fi
 
+          # A retry of a superseded release — its images still deserve
+          # publishing, but the latest pointer must never roll back to older
+          # firmware than what is already live in the channel.
+          if [ "$CHANNEL" = release ]; then
+            MAXPUBLISHED=$(next_of "${ESPHOME}.*" "^${ESPESC}\.[0-9]+$" 0)
+            if [ "${VERSION##*.}" -lt "$MAXPUBLISHED" ]; then
+              echo "::warning::version $VERSION is superseded by $ESPHOME.$MAXPUBLISHED — publishing without moving the latest pointer"
+              UPDATE_LATEST=false
+            fi
+          fi
+
           MATRIX=$(python scripts/firmware-matrix.py build)
           UPLOAD_MATRIX=$(python scripts/firmware-matrix.py upload)
           HAS_UPLOADS=$([ "$(echo "$UPLOAD_MATRIX" | jq '.include | length')" -gt 0 ] &&
