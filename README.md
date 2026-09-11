@@ -53,8 +53,6 @@ that make up the device. Everything else lives under `packages/`, split by role:
 
 The BDF display fonts in `fonts/` come from [IT-Studio-Rech/bdf-fonts](https://github.com/IT-Studio-Rech/bdf-fonts).
 
-CI builds every firmware in `firmwares.yaml` on each PR and ships releases to
-[fw.jethome.com](https://fw.jethome.com) — see the [Release Workflow](doc/RELEASE.md).
 A weekly check compiles the firmwares against new upstream ESPHome releases and
 opens an issue with the results.
 

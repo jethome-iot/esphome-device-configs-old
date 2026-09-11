@@ -62,6 +62,8 @@ jobs:
 
   build-matrix:
     name: Generate build matrix
+    needs: check
+    if: needs.check.outputs.known == 'false'
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
@@ -118,15 +120,18 @@ jobs:
           else
             result=FAIL
           fi
+          # A failed compile must fail the job: the issue job reports
+          # needs.build.result as the overall verdict.
+          [ "$result" = pass ] || exit 1
           echo "result=$result" >> "$GITHUB_OUTPUT"
-          echo "${{ matrix.config }},$result" > check-result.csv
+          echo "${{ matrix.config }},$result" > "check-result-${{ matrix.name }}.csv"
 
       - uses: actions/upload-artifact@v4
         # The issue job needs every result, and must see failures too.
         if: ${{ !cancelled() }}
         with:
           name: check-result-${{ matrix.name }}
-          path: check-result.csv
+          path: "check-result-${{ matrix.name }}.csv"
           if-no-files-found: error
           retention-days: 1
 
