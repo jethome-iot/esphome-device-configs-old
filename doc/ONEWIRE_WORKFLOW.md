@@ -13,6 +13,10 @@ move it. An unplugged sensor reads `--` (`0x8000` over Modbus). Empty slots log
 `Index 8 out of range` at boot; harmless. A reading of exactly 85.0 °C, the DS18B20
 power-on value, is dropped.
 
+Only Dallas temperature sensors take a slot — DS18B20, DS18S20, DS1822, DS1825 and
+DS28EA00. Any other 1-Wire device on the bus is skipped and logged as `Not a temperature
+sensor`.
+
 To choose the order, connect the sensors one at a time, rebooting after each.
 
 ## Addresses

@@ -415,14 +415,20 @@ esphome:
             // A YAML address pins its slot; the stored table follows it.\nfor (size_t\
             \ i = 0; i < std::size(slots); i++) {\n  uint64_t pinned = std::strtoull(sensors[i]->get_address_name().c_str(),\
             \ nullptr, 16);\n  if (pinned == 0)\n    continue;\n  std::replace(std::begin(slots),\
-            \ end, pinned, (uint64_t) 0);\n  slots[i] = pinned;\n}\nfor (uint64_t\
-            \ address : id(one_wire_bus).get_devices()) {\n  if (std::find(std::begin(slots),\
-            \ end, address) != end)\n    continue;\n  auto *slot = std::find(std::begin(slots),\
-            \ end, 0);\n  if (slot == end) {\n    ESP_LOGW(\"temperature\", \"No free\
-            \ slot for 0x%016\" PRIx64, address);\n    continue;\n  }\n  *slot = address;\n\
-            }\nfor (size_t i = 0; i < std::size(slots); i++) {\n  if (slots[i] !=\
-            \ 0) {\n    sensors[i]->set_address(slots[i]);\n  } else {\n    sensors[i]->set_index(std::size(slots));\
-            \  // out of range on purpose: an empty slot takes no device\n  }\n}"
+            \ end, pinned, (uint64_t) 0);\n  slots[i] = pinned;\n}\n// The scan finds\
+            \ every 1-Wire device; only these families read back\n// as a DS18B20\
+            \ scratchpad.\nconst uint8_t families[] = {0x10, 0x22, 0x28, 0x3b, 0x42};\n\
+            auto *families_end = std::end(families);\nfor (uint64_t address : id(one_wire_bus).get_devices())\
+            \ {\n  if (std::find(std::begin(families), families_end, address & 0xff)\
+            \ == families_end) {\n    ESP_LOGW(\"temperature\", \"Not a temperature\
+            \ sensor, skipping 0x%016\" PRIx64, address);\n    continue;\n  }\n  if\
+            \ (std::find(std::begin(slots), end, address) != end)\n    continue;\n\
+            \  auto *slot = std::find(std::begin(slots), end, 0);\n  if (slot == end)\
+            \ {\n    ESP_LOGW(\"temperature\", \"No free slot for 0x%016\" PRIx64,\
+            \ address);\n    continue;\n  }\n  *slot = address;\n}\nfor (size_t i\
+            \ = 0; i < std::size(slots); i++) {\n  if (slots[i] != 0) {\n    sensors[i]->set_address(slots[i]);\n\
+            \  } else {\n    sensors[i]->set_index(std::size(slots));  // out of range\
+            \ on purpose: an empty slot takes no device\n  }\n}"
     - priority: 700
       then:
         - lambda: 'id(modbus_server1).set_address((uint8_t) id(modbus_address).state);
