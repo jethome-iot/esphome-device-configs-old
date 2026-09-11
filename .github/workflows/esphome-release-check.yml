@@ -120,11 +120,12 @@ jobs:
           else
             result=FAIL
           fi
-          # A failed compile must fail the job: the issue job reports
+          # Record the result before propagating the failure: the issue job
+          # needs every row, failed firmwares included, and reports
           # needs.build.result as the overall verdict.
-          [ "$result" = pass ] || exit 1
           echo "result=$result" >> "$GITHUB_OUTPUT"
           echo "${{ matrix.config }},$result" > "check-result-${{ matrix.name }}.csv"
+          [ "$result" = pass ] || exit 1
 
       - uses: actions/upload-artifact@v4
         # The issue job needs every result, and must see failures too.
@@ -138,7 +139,9 @@ jobs:
   issue:
     name: Report the release
     needs: [check, build]
-    if: ${{ !cancelled() && needs.check.outputs.known == 'false' }}
+    if: >-
+      ${{ !cancelled() && needs.check.outputs.known == 'false' &&
+      needs.build.result != 'skipped' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
