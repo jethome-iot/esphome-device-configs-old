@@ -160,7 +160,10 @@ jobs:
             # Nightly: <esphome>.<YYYYMMDD>.<attempt>, attempt auto-increments
             # per date from the existing tags, starting at .1.
             DATE=$(date -u +%Y%m%d)
-            if VERSION=$(version_at_head "${ESPHOME}.${DATE}.*" "^${ESPESC}\.${DATE}\.[0-9]+$"); then
+            # Reuse keys on the commit, not on today's date: a retry after UTC
+            # midnight must complete the original publication, not mint
+            # another number.
+            if VERSION=$(version_at_head "${ESPHOME}.*" "^${ESPESC}\.[0-9]{8}\.[0-9]+$"); then
               : # a retry of this run: the previous attempt's version stands
             else
               LATEST=$(next_of "${ESPHOME}.${DATE}.*" "^${ESPESC}\.${DATE}\.[0-9]+$" 0)
@@ -365,7 +368,17 @@ jobs:
             # commit stands, one at another commit is a collision.
             if [ "$VERSION" != "$TAG" ]; then
               EXISTING=$(gh api "repos/$REPO/git/ref/tags/$VERSION" \
-                --jq '.object.sha' 2>/dev/null || true)
+                --jq '.object.sha + " " + .object.type' 2>/dev/null || true)
+              if [ -n "$EXISTING" ]; then
+                # An annotated tag reports its own object here, not the
+                # commit — peel it before comparing, like resolve does.
+                if [ "${EXISTING#* }" = "tag" ]; then
+                  EXISTING=$(gh api "repos/$REPO/git/tags/${EXISTING% *}" \
+                    --jq '.object.sha' 2>/dev/null || true)
+                else
+                  EXISTING=${EXISTING% *}
+                fi
+              fi
               if [ -n "$EXISTING" ] && [ "$EXISTING" != "$SHA" ]; then
                 echo "::error::version tag $VERSION exists at another commit ($EXISTING) — refusing to reuse"
                 exit 1
