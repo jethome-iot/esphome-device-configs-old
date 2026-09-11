@@ -33,7 +33,7 @@ The firmware version is derived from the ESPHome pin in `requirements.txt`
 | Channel | When | Version format | Example |
 | --- | --- | --- | --- |
 | `release` | full releases | `<esphome>.<sub>` | `2026.8.2.0` |
-| `nightly` | prereleases and manual dispatch | `<esphome>.<YYYYMMDD>.<attempt>` | `2026.8.2.20260911.1` |
+| `nightly` | prereleases; manual dispatch with `channel: nightly` | `<esphome>.<YYYYMMDD>.<attempt>` | `2026.8.2.20260911.1` |
 
 `<sub>` and `<attempt>` auto-increment from the existing git tags of previous
 releases (max + 1), so no counter lives anywhere: a re-release of the same

@@ -1,9 +1,10 @@
 name: Release
 
 # Builds every firmware in firmwares.yaml and ships it. Full releases publish
-# to the `release` channel on fw.jethome.com; prereleases and manual runs to
-# `nightly` while no beta channel exists. Every built firmware lands on the
-# GitHub release as an asset; only the `upload: true` ones go to the server.
+# to the `release` channel on fw.jethome.com; prereleases always go to
+# `nightly` while no beta channel exists, and manual runs pick the channel
+# (default release). Every built firmware lands on the GitHub release as an
+# asset; only the `upload: true` ones go to the server.
 
 on:
   release:
@@ -126,6 +127,20 @@ jobs:
             echo "${found:-$default}"
           }
 
+          # A retried run must reuse the version a previous attempt already
+          # tagged at this commit, or every re-run would mint a new number and
+          # re-publish under it.
+          version_at_head() {
+            local t
+            while read -r t; do
+              if [ "$(git rev-parse "$t^{commit}")" = "$(git rev-parse HEAD)" ]; then
+                printf '%s' "$t"
+                return 0
+              fi
+            done < <(git tag --list "$1" | { grep -E "$2" || true; })
+            return 1
+          }
+
           if [ "$CHANNEL" = release ]; then
             # A human-made tag must be the bare esphome pin (the workflow picks
             # the next subversion, starting at .0) or a full '<esphome>.<sub>'.
@@ -135,6 +150,8 @@ jobs:
                 exit 1
               fi
               VERSION="$TAG"
+            elif VERSION=$(version_at_head "${ESPHOME}.*" "^${ESPESC}\.[0-9]+$"); then
+              : # a retry of this run: the previous attempt's version stands
             else
               LATEST=$(next_of "${ESPHOME}.*" "^${ESPESC}\.[0-9]+$" -1)
               VERSION="${ESPHOME}.$((LATEST + 1))"
@@ -143,8 +160,12 @@ jobs:
             # Nightly: <esphome>.<YYYYMMDD>.<attempt>, attempt auto-increments
             # per date from the existing tags, starting at .1.
             DATE=$(date -u +%Y%m%d)
-            LATEST=$(next_of "${ESPHOME}.${DATE}.*" "^${ESPESC}\.${DATE}\.[0-9]+$" 0)
-            VERSION="${ESPHOME}.${DATE}.$((LATEST + 1))"
+            if VERSION=$(version_at_head "${ESPHOME}.${DATE}.*" "^${ESPESC}\.${DATE}\.[0-9]+$"); then
+              : # a retry of this run: the previous attempt's version stands
+            else
+              LATEST=$(next_of "${ESPHOME}.${DATE}.*" "^${ESPESC}\.${DATE}\.[0-9]+$" 0)
+              VERSION="${ESPHOME}.${DATE}.$((LATEST + 1))"
+            fi
           fi
 
           MATRIX=$(python scripts/firmware-matrix.py build)
@@ -336,16 +357,25 @@ jobs:
             TAG=$EVENT_TAG
             gh release upload "$TAG" firmware/* --repo "$REPO" --clobber
 
-            # The firmware version allocated for this run is never the tag a
-            # human chose. Record it, or the next allocation picks the same
-            # number again and overwrites the server images. Creating the ref
-            # fails loudly if the version is somehow taken already. The
-            # dispatch path needs no such tag: its release is tagged with the
-            # version.
-            if ! gh api -X POST "repos/$REPO/git/refs" \
-              -f ref="refs/tags/$VERSION" -f sha="$SHA" >/dev/null; then
-              echo "::error::cannot create version tag $VERSION — it already exists or the API refused"
-              exit 1
+            # The firmware version allocated for this run is normally never
+            # the tag a human chose: record it, or the next allocation picks
+            # the same number again and overwrites the server images. The
+            # dispatch path skips this: its release is tagged with the
+            # version. Idempotent on re-runs — a ref already pointing at this
+            # commit stands, one at another commit is a collision.
+            if [ "$VERSION" != "$TAG" ]; then
+              EXISTING=$(gh api "repos/$REPO/git/ref/tags/$VERSION" \
+                --jq '.object.sha' 2>/dev/null || true)
+              if [ -n "$EXISTING" ] && [ "$EXISTING" != "$SHA" ]; then
+                echo "::error::version tag $VERSION exists at another commit ($EXISTING) — refusing to reuse"
+                exit 1
+              fi
+              if [ -z "$EXISTING" ] && \
+                ! gh api -X POST "repos/$REPO/git/refs" \
+                  -f ref="refs/tags/$VERSION" -f sha="$SHA" >/dev/null; then
+                echo "::error::cannot create version tag $VERSION"
+                exit 1
+              fi
             fi
           else
             TAG=$VERSION
