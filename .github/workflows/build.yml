@@ -23,7 +23,7 @@ jobs:
     outputs:
       configs: ${{ steps.list.outputs.configs }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: List device configs
         id: list
@@ -46,7 +46,7 @@ jobs:
       matrix:
         config: ${{ fromJson(needs.discover.outputs.configs) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v5
         with:
@@ -80,7 +80,7 @@ jobs:
     name: Check dist/ is current
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v5
         with:
@@ -105,7 +105,7 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v5
         with:
