@@ -84,6 +84,7 @@ jobs:
           IN_CHANNEL: ${{ inputs.channel }}
           IN_DRY_RUN: ${{ inputs.dry_run }}
           IN_UPDATE_LATEST: ${{ inputs.update_latest }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
         run: |
           set -euo pipefail
 
@@ -127,9 +128,10 @@ jobs:
             echo "${found:-$default}"
           }
 
-          # A retried run must reuse the version a previous attempt already
-          # tagged at this commit, or every re-run would mint a new number and
-          # re-publish under it.
+          # Only a retry of this very run (re-run of the same workflow run
+          # bumps run_attempt) may reuse the version its earlier attempt
+          # tagged at this commit. A fresh run always allocates, so repeated
+          # dispatches keep minting new attempts.
           version_at_head() {
             local t
             while read -r t; do
@@ -150,7 +152,8 @@ jobs:
                 exit 1
               fi
               VERSION="$TAG"
-            elif VERSION=$(version_at_head "${ESPHOME}.*" "^${ESPESC}\.[0-9]+$"); then
+            elif [ "$RUN_ATTEMPT" -gt 1 ] &&
+              VERSION=$(version_at_head "${ESPHOME}.*" "^${ESPESC}\.[0-9]+$"); then
               : # a retry of this run: the previous attempt's version stands
             else
               LATEST=$(next_of "${ESPHOME}.*" "^${ESPESC}\.[0-9]+$" -1)
@@ -158,12 +161,12 @@ jobs:
             fi
           else
             # Nightly: <esphome>.<YYYYMMDD>.<attempt>, attempt auto-increments
-            # per date from the existing tags, starting at .1.
+            # per date from the existing tags, starting at .1. The retry
+            # lookup is date-independent: a re-run after UTC midnight must
+            # complete the original publication.
             DATE=$(date -u +%Y%m%d)
-            # Reuse keys on the commit, not on today's date: a retry after UTC
-            # midnight must complete the original publication, not mint
-            # another number.
-            if VERSION=$(version_at_head "${ESPHOME}.*" "^${ESPESC}\.[0-9]{8}\.[0-9]+$"); then
+            if [ "$RUN_ATTEMPT" -gt 1 ] &&
+              VERSION=$(version_at_head "${ESPHOME}.*" "^${ESPESC}\.[0-9]{8}\.[0-9]+$"); then
               : # a retry of this run: the previous attempt's version stands
             else
               LATEST=$(next_of "${ESPHOME}.${DATE}.*" "^${ESPESC}\.${DATE}\.[0-9]+$" 0)
