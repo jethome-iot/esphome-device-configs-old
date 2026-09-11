@@ -190,6 +190,10 @@ jobs:
           # nothing and must not burn a number.
           if [ "$CREATE_RELEASE" = "true" ] || [ "$DO_UPLOAD" = "true" ]; then
             if ! git rev-parse -q --verify "refs/tags/$VERSION" >/dev/null; then
+              # Annotated tags need a committer identity; checkout does not
+              # configure one on a fresh runner.
+              git config user.name "github-actions[bot]"
+              git config user.email "github-actions[bot]@users.noreply.github.com"
               git tag -a "$VERSION" -m "run ${RUN_ID}" HEAD
               git push origin "refs/tags/$VERSION"
             fi
