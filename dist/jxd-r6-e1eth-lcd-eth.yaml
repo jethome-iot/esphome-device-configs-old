@@ -183,14 +183,34 @@ switch:
       number: 5
       mode:
         output: true
-binary_sensor:
-  - platform: gpio
-    name: FN button
-    id: fn_button
+text_sensor:
+  - platform: uptime
+    name: Uptime
+    id: uptime_sensor
     internal: true
-    pin:
-      number: GPIO0
-      inverted: true
+    format:
+      separator: ' '
+  - platform: ethernet_info
+    ip_address:
+      name: Ethernet IP
+      address_0:
+        id: ip
+    mac_address:
+      name: Ethernet MAC
+      id: mac_eth
+pca9554:
+  - id: jxd_d6_r6_exp
+    pin_count: 16
+    address: 34
+  - id: jxd_display_exp
+    pin_count: 16
+    address: 36
+one_wire:
+  - platform: ds2484
+    id: one_wire_bus
+    address: 24
+    active_pullup: true
+binary_sensor:
   - platform: gpio
     name: Input 1
     id: input_1
@@ -354,33 +374,6 @@ binary_sensor:
           \ id(display1).show_page(id(main_page));\n} else if (page == id(main_page))\
           \ {\n  id(display1).show_page(id(blank_page));\n} else {\n  id(display1).show_page(id(main_page));\n\
           }"
-text_sensor:
-  - platform: uptime
-    name: Uptime
-    id: uptime_sensor
-    internal: true
-    format:
-      separator: ' '
-  - platform: ethernet_info
-    ip_address:
-      name: Ethernet IP
-      address_0:
-        id: ip
-    mac_address:
-      name: Ethernet MAC
-      id: mac_eth
-pca9554:
-  - id: jxd_d6_r6_exp
-    pin_count: 16
-    address: 34
-  - id: jxd_display_exp
-    pin_count: 16
-    address: 36
-one_wire:
-  - platform: ds2484
-    id: one_wire_bus
-    address: 24
-    active_pullup: true
 globals:
   - id: relays
     type: std::vector<switch_::Switch *>
@@ -844,6 +837,12 @@ graphical_display_menu:
     - type: menu
       text: Temperatures
       items:
+        - type: label
+          text: !lambda |-
+            auto *s = id(pcb_temp);
+            if (std::isnan(s->state))
+              return str_sprintf("%s: --", s->get_name().c_str());
+            return str_sprintf("%s: %.1f°C", s->get_name().c_str(), s->state);
         - type: label
           text: !lambda |-
             auto *s = id(temp_1);
