@@ -112,7 +112,15 @@ esphome:
               std::replace(std::begin(slots), end, pinned, (uint64_t) 0);
               slots[i] = pinned;
             }
+            // The scan finds every 1-Wire device; only these families read back
+            // as a DS18B20 scratchpad.
+            const uint8_t families[] = {0x10, 0x22, 0x28, 0x3b, 0x42};
+            auto *families_end = std::end(families);
             for (uint64_t address : id(one_wire_bus).get_devices()) {
+              if (std::find(std::begin(families), families_end, address & 0xff) == families_end) {
+                ESP_LOGW("temperature", "Not a temperature sensor, skipping 0x%016" PRIx64, address);
+                continue;
+              }
               if (std::find(std::begin(slots), end, address) != end)
                 continue;
               auto *slot = std::find(std::begin(slots), end, 0);
