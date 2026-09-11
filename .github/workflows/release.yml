@@ -178,16 +178,10 @@ jobs:
             fi
           fi
 
-          # A retry of a superseded release — its images still deserve
-          # publishing, but the latest pointer must never roll back to older
-          # firmware than what is already live in the channel.
-          if [ "$CHANNEL" = release ]; then
-            MAXPUBLISHED=$(next_of "${ESPHOME}.*" "^${ESPESC}\.[0-9]+$" 0)
-            if [ "${VERSION##*.}" -lt "$MAXPUBLISHED" ]; then
-              echo "::warning::version $VERSION is superseded by $ESPHOME.$MAXPUBLISHED — publishing without moving the latest pointer"
-              UPDATE_LATEST=false
-            fi
-          fi
+          # Whether the latest pointer may move is decided in upload-fw,
+          # against the tags as they are when the upload actually runs — a
+          # re-run of failed jobs reuses these outputs without re-executing
+          # resolve, and a newer release may have published since.
 
           MATRIX=$(python scripts/firmware-matrix.py build)
           UPLOAD_MATRIX=$(python scripts/firmware-matrix.py upload)
@@ -331,6 +325,33 @@ jobs:
       # The factory call carries update_latest: within the action, the slot
       # step applies that flag before it uploads anything, so the OTA image —
       # the one the fleet fetches — has to be up first.
+      # Decided here, not in resolve: re-running failed jobs reuses the
+      # original resolve outputs, and a newer version may have published
+      # since — the pointer must be checked against the tags as they are when
+      # the upload actually runs. Full versions are compared across esphome
+      # pins. Tag-exists is a conservative proxy for published: a tag whose
+      # own upload failed also suppresses the pointer — the safe direction,
+      # a possible missed forward move is announced by the warning.
+      - name: Decide the latest pointer against current tags
+        id: pointer
+        if: env.FW_CHANNEL == 'release'
+        env:
+          ESPHOME: ${{ needs.resolve.outputs.esphome }}
+          FW_VERSION: ${{ env.FW_VERSION }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          MAXTAG=$(git ls-remote --tags "https://github.com/$REPO" 'refs/tags/*' |
+            sed 's|.*refs/tags/||; /\^\{\}$/d' |
+            { grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' || true; } | sort -V | tail -1)
+          if [ -n "$MAXTAG" ] && [ "$FW_VERSION" != "$MAXTAG" ] &&
+            [ "$(printf '%s\n%s\n' "$FW_VERSION" "$MAXTAG" | sort -V | head -n1)" = "$FW_VERSION" ]; then
+            echo "::warning::version $FW_VERSION is superseded by $MAXTAG — publishing without moving the latest pointer"
+            echo "update_latest=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "update_latest=${{ needs.resolve.outputs.update_latest }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Upload the factory image
         uses: jethome-iot/actions/firmware-upload@99eaf1ffe7fad4972731e9489257f7811395963e
         with:
@@ -342,7 +363,7 @@ jobs:
           version: ${{ env.FW_VERSION }}
           force_overwrite: 'true'
           generatefirmwareslot: 'true'
-          update_latest: ${{ needs.resolve.outputs.update_latest }}
+          update_latest: ${{ steps.pointer.outputs.update_latest || needs.resolve.outputs.update_latest }}
           supported_devices: ${{ matrix.device }}
           FWUPLOAD: ${{ secrets.FWUPLOAD }}
 
