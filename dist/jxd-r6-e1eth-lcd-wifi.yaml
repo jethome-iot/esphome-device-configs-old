@@ -17,6 +17,7 @@ api:
   reboot_timeout: 15min
 ota:
   - platform: esphome
+  - platform: web_server
 preferences:
   flash_write_interval: 5s
 logger:
