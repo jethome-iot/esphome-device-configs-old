@@ -41,15 +41,6 @@ switch:
     id: red_led
     pin: GPIO2
 
-binary_sensor:
-  - platform: gpio
-    name: "FN button"
-    id: fn_button
-    internal: true
-    pin:
-      number: GPIO0
-      inverted: true
-
 text_sensor:
   - platform: uptime
     name: Uptime
