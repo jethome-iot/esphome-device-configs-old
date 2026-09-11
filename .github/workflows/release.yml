@@ -85,6 +85,7 @@ jobs:
           IN_DRY_RUN: ${{ inputs.dry_run }}
           IN_UPDATE_LATEST: ${{ inputs.update_latest }}
           RUN_ATTEMPT: ${{ github.run_attempt }}
+          RUN_ID: ${{ github.run_id }}
         run: |
           set -euo pipefail
 
@@ -130,12 +131,15 @@ jobs:
 
           # Only a retry of this very run (re-run of the same workflow run
           # bumps run_attempt) may reuse the version its earlier attempt
-          # tagged at this commit. A fresh run always allocates, so repeated
-          # dispatches keep minting new attempts.
-          version_at_head() {
-            local t
+          # allocated. The assets job records that version as an annotated
+          # tag whose message carries the run id — the only state needed,
+          # and one sibling runs from the same commit cannot confuse.
+          version_of_this_run() {
+            local t objtype
             while read -r t; do
-              if [ "$(git rev-parse "$t^{commit}")" = "$(git rev-parse HEAD)" ]; then
+              objtype=$(git cat-file -t "$t" 2>/dev/null || true)
+              if [ "$objtype" = "tag" ] &&
+                git cat-file tag "$t" 2>/dev/null | grep -qx "run ${RUN_ID}"; then
                 printf '%s' "$t"
                 return 0
               fi
@@ -153,7 +157,7 @@ jobs:
               fi
               VERSION="$TAG"
             elif [ "$RUN_ATTEMPT" -gt 1 ] &&
-              VERSION=$(version_at_head "${ESPHOME}.*" "^${ESPESC}\.[0-9]+$"); then
+              VERSION=$(version_of_this_run "${ESPHOME}.*" "^${ESPESC}\.[0-9]+$"); then
               : # a retry of this run: the previous attempt's version stands
             else
               LATEST=$(next_of "${ESPHOME}.*" "^${ESPESC}\.[0-9]+$" -1)
@@ -166,7 +170,7 @@ jobs:
             # complete the original publication.
             DATE=$(date -u +%Y%m%d)
             if [ "$RUN_ATTEMPT" -gt 1 ] &&
-              VERSION=$(version_at_head "${ESPHOME}.*" "^${ESPESC}\.[0-9]{8}\.[0-9]+$"); then
+              VERSION=$(version_of_this_run "${ESPHOME}.*" "^${ESPESC}\.[0-9]{8}\.[0-9]+$"); then
               : # a retry of this run: the previous attempt's version stands
             else
               LATEST=$(next_of "${ESPHOME}.${DATE}.*" "^${ESPESC}\.${DATE}\.[0-9]+$" 0)
@@ -357,41 +361,56 @@ jobs:
           ESPHOME: ${{ needs.resolve.outputs.esphome }}
           SHA: ${{ github.sha }}
           REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
         run: |
           set -euo pipefail
+
+          # Record the allocated version as an annotated tag carrying the run
+          # id in its message: the state a retry of this run reads back in
+          # resolve, and the reason sibling runs from the same commit cannot
+          # hijack each other's versions. Idempotent: an existing tag at
+          # another commit is a collision, at this commit it is re-pointed at
+          # a fresh annotated object.
+          record_version_tag() {
+            local existing tagobj
+            existing=$(gh api "repos/$REPO/git/ref/tags/$VERSION" \
+              --jq '.object.sha + " " + .object.type' 2>/dev/null || true)
+            if [ -n "$existing" ]; then
+              # An annotated tag reports its own object here, not the commit
+              # — peel it before comparing.
+              if [ "${existing#* }" = "tag" ]; then
+                existing=$(gh api "repos/$REPO/git/tags/${existing% *}" \
+                  --jq '.object.sha' 2>/dev/null || true)
+              else
+                existing=${existing% *}
+              fi
+            fi
+            if [ -n "$existing" ] && [ "$existing" != "$SHA" ]; then
+              echo "::error::version tag $VERSION exists at another commit ($existing) — refusing to reuse"
+              exit 1
+            fi
+            tagobj=$(gh api -X POST "repos/$REPO/git/tags" \
+              -f tag="$VERSION" -f message="run ${RUN_ID}" \
+              -f object="$SHA" -f type="commit" --jq '.sha')
+            if [ -n "$existing" ]; then
+              gh api -X PATCH "repos/$REPO/git/refs/tags/$VERSION" \
+                -f sha="$tagobj" -F force=true >/dev/null
+            else
+              gh api -X POST "repos/$REPO/git/refs" \
+                -f ref="refs/tags/$VERSION" -f sha="$tagobj" >/dev/null
+            fi
+          }
+
           if [ "$EVENT" = "release" ]; then
             TAG=$EVENT_TAG
             gh release upload "$TAG" firmware/* --repo "$REPO" --clobber
-
             # The firmware version allocated for this run is normally never
-            # the tag a human chose: record it, or the next allocation picks
-            # the same number again and overwrites the server images. The
-            # dispatch path skips this: its release is tagged with the
-            # version. Idempotent on re-runs — a ref already pointing at this
-            # commit stands, one at another commit is a collision.
+            # the tag a human chose; without recording it, the next
+            # allocation picks the same number again and overwrites the
+            # server images. The dispatch path records its tag too —
+            # gh release create leaves it lightweight.
             if [ "$VERSION" != "$TAG" ]; then
-              EXISTING=$(gh api "repos/$REPO/git/ref/tags/$VERSION" \
-                --jq '.object.sha + " " + .object.type' 2>/dev/null || true)
-              if [ -n "$EXISTING" ]; then
-                # An annotated tag reports its own object here, not the
-                # commit — peel it before comparing, like resolve does.
-                if [ "${EXISTING#* }" = "tag" ]; then
-                  EXISTING=$(gh api "repos/$REPO/git/tags/${EXISTING% *}" \
-                    --jq '.object.sha' 2>/dev/null || true)
-                else
-                  EXISTING=${EXISTING% *}
-                fi
-              fi
-              if [ -n "$EXISTING" ] && [ "$EXISTING" != "$SHA" ]; then
-                echo "::error::version tag $VERSION exists at another commit ($EXISTING) — refusing to reuse"
-                exit 1
-              fi
-              if [ -z "$EXISTING" ] && \
-                ! gh api -X POST "repos/$REPO/git/refs" \
-                  -f ref="refs/tags/$VERSION" -f sha="$SHA" >/dev/null; then
-                echo "::error::cannot create version tag $VERSION"
-                exit 1
-              fi
+              record_version_tag
             fi
           else
             TAG=$VERSION
@@ -402,5 +421,6 @@ jobs:
               gh release create "$TAG" --repo "$REPO" --target "$SHA" \
                 --title "$TAG" --notes "$NOTES" $PRERELEASE_FLAG
             gh release upload "$TAG" firmware/* --repo "$REPO" --clobber
+            record_version_tag
           fi
           echo "Attached $(find firmware -maxdepth 1 -type f | wc -l) files to release $TAG" >> "$GITHUB_STEP_SUMMARY"
