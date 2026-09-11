@@ -12,6 +12,7 @@ psram:
   mode: quad
   speed: 80MHz
 api:
+  id: api_server
   encryption: null
   reboot_timeout: 15min
 ota:
@@ -687,6 +688,19 @@ font:
     id: f5x7
   - file: https://raw.githubusercontent.com/jethome-iot/esphome-device-configs/master/fonts/spleen-12x24.bdf
     id: big_label_font
+image:
+  - file: https://raw.githubusercontent.com/jethome-iot/esphome-device-configs/master/res/ha.svg
+    id: icon_ha
+    type: BINARY
+  - file: https://raw.githubusercontent.com/jethome-iot/esphome-device-configs/master/res/ha-off.svg
+    id: icon_ha_off
+    type: BINARY
+  - file: https://raw.githubusercontent.com/jethome-iot/esphome-device-configs/master/res/wifi.svg
+    id: icon_link
+    type: BINARY
+  - file: https://raw.githubusercontent.com/jethome-iot/esphome-device-configs/master/res/wifi-off.svg
+    id: icon_link_off
+    type: BINARY
 display:
   - platform: ssd1306_i2c
     id: display1
@@ -712,15 +726,24 @@ display:
 
           y += row_size;
 
+          it.printf(0, y, id(f6x12), "IP: %s", id(ip).state.c_str());
+
+          y += row_size;
+
           it.printf(0, y, id(f6x12), "UP: %s", id(uptime_sensor).state.c_str());
 
           y += row_size;
 
           it.printf(0, y, id(f6x12), "VIN: %2.1fV", id(input_voltage).state);
 
-          y += row_size;
 
-          it.printf(0, y, id(f6x12), "IP: %s", id(ip).state.c_str());'
+          // Status icons share the bottom row, to the right of the VIN reading:
+
+          // centred on the row''s cap height, and off the screen edge.
+
+          it.image(88, 45, ${link_connected} ? id(icon_link) : id(icon_link_off));
+
+          it.image(109, 45, id(api_server).is_connected() ? id(icon_ha) : id(icon_ha_off));'
   - platform: ssd1306_i2c
     id: !extend 'display1'
     pages:
@@ -1125,6 +1148,7 @@ dashboard_import:
   import_full_config: true
 substitutions:
   timezone: UTC
+  link_connected: id(wifi_id).is_connected()
   name: jxd-r6-e1eth-lcd-wifi
   friendly_name: JXD-R6-E1ETH-LCD
   version: 1.0.0

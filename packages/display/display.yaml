@@ -11,6 +11,16 @@ font:
   - file: fonts/spleen-12x24.bdf
     id: big_label_font
 
+# The link icons come with the connectivity package: packages/features/{ethernet,wifi}.yaml.
+image:
+  - file: res/ha.svg
+    id: icon_ha
+    type: BINARY
+
+  - file: res/ha-off.svg
+    id: icon_ha_off
+    type: BINARY
+
 script:
   - id: check_blank_page
     then:
@@ -38,8 +48,13 @@ display:
 
           it.printf(0, y, id(f6x12), "%s", str_name.c_str());
           y += row_size;
+          it.printf(0, y, id(f6x12), "IP: %s", id(ip).state.c_str());
+          y += row_size;
           it.printf(0, y, id(f6x12), "UP: %s", id(uptime_sensor).state.c_str());
           y += row_size;
           it.printf(0, y, id(f6x12), "VIN: %2.1fV", id(input_voltage).state);
-          y += row_size;
-          it.printf(0, y, id(f6x12), "IP: %s", id(ip).state.c_str());
+
+          // Status icons share the bottom row, to the right of the VIN reading:
+          // centred on the row's cap height, and off the screen edge.
+          it.image(88, 45, ${link_connected} ? id(icon_link) : id(icon_link_off));
+          it.image(109, 45, id(api_server).is_connected() ? id(icon_ha) : id(icon_ha_off));

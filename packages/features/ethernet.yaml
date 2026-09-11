@@ -1,3 +1,16 @@
+# The main page's link icon, and the C++ expression that picks its state.
+substitutions:
+  link_connected: id(ethernet_id).is_connected()
+
+image:
+  - file: res/ethernet.svg
+    id: icon_link
+    type: BINARY
+
+  - file: res/ethernet-off.svg
+    id: icon_link_off
+    type: BINARY
+
 ethernet:
   id: ethernet_id
   type: LAN8720

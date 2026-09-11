@@ -31,6 +31,14 @@ repos:
         exclude: ^dist/
   - repo: local
     hooks:
+      # Rewrites res/, so a stale copy fails the commit until it is staged.
+      - id: build-icons
+        name: regenerate res/
+        entry: python scripts/build-icons.py
+        language: python
+        pass_filenames: false
+        files: ^(res/|scripts/build-icons\.py$)
+
       # Rewrites dist/, so a stale copy fails the commit until it is staged.
       # Keep the esphome pin in step with requirements.txt: a different version
       # here would generate a different dist/ than CI does.
