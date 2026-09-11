@@ -1,7 +1,6 @@
 version: 2
 updates:
-  # Actions referenced by .github/workflows (checkout, setup-python, cache,
-  # jethome-iot/actions/*).
+  # Actions referenced by .github/workflows (checkout, setup-python, cache).
   - package-ecosystem: github-actions
     directory: /
     schedule:
