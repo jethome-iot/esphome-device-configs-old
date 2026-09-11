@@ -183,6 +183,18 @@ jobs:
           # re-run of failed jobs reuses these outputs without re-executing
           # resolve, and a newer release may have published since.
 
+          # Reserve the allocated version immediately, annotated with the run
+          # id: a run that fails before assets would otherwise leave the
+          # number free for another run to publish from a different commit,
+          # and a retry of this run could never complete it. Dry runs publish
+          # nothing and must not burn a number.
+          if [ "$CREATE_RELEASE" = "true" ] || [ "$DO_UPLOAD" = "true" ]; then
+            if ! git rev-parse -q --verify "refs/tags/$VERSION" >/dev/null; then
+              git tag -a "$VERSION" -m "run ${RUN_ID}" HEAD
+              git push origin "refs/tags/$VERSION"
+            fi
+          fi
+
           MATRIX=$(python scripts/firmware-matrix.py build)
           UPLOAD_MATRIX=$(python scripts/firmware-matrix.py upload)
           HAS_UPLOADS=$([ "$(echo "$UPLOAD_MATRIX" | jq '.include | length')" -gt 0 ] &&
@@ -336,13 +348,15 @@ jobs:
         id: pointer
         if: env.FW_CHANNEL == 'release'
         env:
-          ESPHOME: ${{ needs.resolve.outputs.esphome }}
           FW_VERSION: ${{ env.FW_VERSION }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
+          # grep -vF drops the peeled ^{} duplicate refs; a fixed string —
+          # an escaped-brace sed address is an invalid interval for GNU sed.
           MAXTAG=$(git ls-remote --tags "https://github.com/$REPO" 'refs/tags/*' |
-            sed 's|.*refs/tags/||; /\^\{\}$/d' |
+            sed 's|.*refs/tags/||' |
+            { grep -vF '{}$' || true; } |
             { grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' || true; } | sort -V | tail -1)
           if [ -n "$MAXTAG" ] && [ "$FW_VERSION" != "$MAXTAG" ] &&
             [ "$(printf '%s\n%s\n' "$FW_VERSION" "$MAXTAG" | sort -V | head -n1)" = "$FW_VERSION" ]; then
