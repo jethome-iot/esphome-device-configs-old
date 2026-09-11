@@ -25,14 +25,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install pyyaml
+        run: pip install pyyaml
+
+      # firmwares.yaml is the single source of truth for what gets built.
       - name: List device configs
         id: list
         run: |
-          configs=$(find . -maxdepth 1 -name '*.yaml' -not -name '.*' -printf '%P\n' | sort |
-            jq -R -s -c 'split("\n") | map(select(length > 0))')
+          configs=$(python scripts/firmware-matrix.py build |
+            jq -c '[.include[].config]')
           echo "Found: $configs"
           if [ "$configs" = "[]" ]; then
-            echo "No device configs found" >&2
+            echo "No device configs in firmwares.yaml" >&2
             exit 1
           fi
           echo "configs=$configs" >> "$GITHUB_OUTPUT"
