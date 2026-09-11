@@ -1,0 +1,96 @@
+# Release workflow
+
+How firmware gets built, versioned and published, and what runs where.
+
+## What runs automatically
+
+| Workflow | When | What it does |
+| --- | --- | --- |
+| Build (`build.yml`) | push to `master`, every PR, manual | Discovers firmwares in `firmwares.yaml`, compiles each with the pinned ESPHome, verifies `dist/` is current, runs lint |
+| Release (`release.yml`) | a release is published (incl. prerelease), manual dispatch | Compiles every firmware, attaches binaries to the GitHub release, uploads the `upload: true` ones to fw.jethome.com |
+| Dependabot | weekly | PRs bumping workflow actions and the pinned files in `requirements.txt` / `requirements-dev.txt`; an esphome bump PR is build-tested by Build |
+
+## The firmware list: `firmwares.yaml`
+
+The single source of truth for CI and releases. Each entry:
+
+```yaml
+firmwares:
+  - config: jxd-r6-e1eth-lcd-eth.yaml  # device config, relative to repo root
+    device: jxd-r6-e1eth-lcd           # slug level on fw.jethome.com
+    upload: true                       # copy ota+factory to fw.jethome.com on release
+```
+
+Binaries of `upload: false` firmwares still ship as GitHub release assets —
+they just never reach the firmware server. `scripts/firmware-matrix.py`
+validates the file and turns it into the workflow matrices.
+
+## Channels and versions
+
+The firmware version is derived from the ESPHome pin in `requirements.txt`
+(`<esphome>` below), not from the repository release tag:
+
+| Channel | When | Version format | Example |
+| --- | --- | --- | --- |
+| `release` | full releases | `<esphome>.<sub>` | `2026.8.2.0` |
+| `nightly` | prereleases and manual dispatch | `<esphome>.<YYYYMMDD>.<attempt>` | `2026.8.2.20260911.1` |
+
+`<sub>` and `<attempt>` auto-increment from the existing git tags of previous
+releases (max + 1), so no counter lives anywhere: a re-release of the same
+esphome version bumps `<sub>`, a new esphome version resets it to 0. There is
+no beta channel on fw.jethome.com yet; prereleases go to `nightly` until one
+exists.
+
+The version reaches the firmware through its `version` substitution
+(`esphome -s version <ver> compile ...`), so nothing in the configs is edited
+at build time.
+
+## Cutting a release
+
+1. Make sure `requirements.txt` pins the esphome version you want to ship
+   (dependabot opens the bump PR, Build CI test-builds it — just merge).
+2. Go to **Actions → Release → Run workflow**:
+   - first with `dry_run` on: builds everything, uploads artifacts, touches
+     nothing;
+   - then with `dry_run` off: the workflow computes the version, creates the
+     GitHub release (prerelease for the `nightly` channel), attaches all
+     binaries, and uploads the `upload: true` firmwares to the server.
+3. Alternatively, create the release on GitHub yourself. A full release tag
+   must be `<esphome>` (workflow picks the next subversion) or
+   `<esphome>.<sub>` — the esphome part must match the `requirements.txt`
+   pin, otherwise the run fails.
+
+## What lands where
+
+**GitHub release assets** — every built firmware, both images:
+
+```
+<config-stem>-<version>-factory.bin   # merged image for flashing
+<config-stem>-<version>-ota.bin       # OTA image
+*.md5
+```
+
+**fw.jethome.com** — only `upload: true` firmwares, both images per device:
+
+- hierarchy `JetHome.jxd.firmware.esphome.<device>.<channel>`
+- image types `esp.bin` (factory) and `esp.ota` (OTA)
+- hash: md5 (the server serves it as `info.md5` for OTA updates)
+- `supported_devices`: the device slug; the `latest` pointer moves only on
+  `release` channel uploads (manual runs control it with `update_latest`)
+
+## Secrets
+
+| Secret | Purpose |
+| --- | --- |
+| `FWSITE` | Firmware server base URL (`https://fw.jethome.com`). The upload action defaults to its test host, so the workflow refuses to run without it. |
+| `FWUPLOAD` | Upload token for the firmware server. |
+
+Both are organization secrets; they are never used outside the `upload-fw`
+job.
+
+## Local equivalent
+
+```bash
+esphome -s version <version> compile <config.yaml>
+# images land in .esphome/build/<name>/.pioenvs/<name>/firmware.{factory,ota}.bin
+```

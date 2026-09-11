@@ -1,0 +1,323 @@
+name: Release
+
+# Builds every firmware in firmwares.yaml and ships it. Full releases publish
+# to the `release` channel on fw.jethome.com; prereleases and manual runs to
+# `nightly` while no beta channel exists. Every built firmware lands on the
+# GitHub release as an asset; only the `upload: true` ones go to the server.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: 'Firmware channel to publish to'
+        type: choice
+        options:
+          - release
+          - nightly
+        default: release
+      dry_run:
+        description: 'Build only: attach nothing, upload nothing'
+        type: boolean
+        default: true
+      update_latest:
+        description: 'Move the release channel latest pointer (release channel only)'
+        type: boolean
+        default: true
+
+run-name: >-
+  ${{ github.event_name == 'release' &&
+  format('Release {0}', github.event.release.tag_name) ||
+  format('Release dispatch ({0})', inputs.channel) }}
+
+concurrency:
+  # Never cancel: a killed run leaves half-published firmware behind.
+  group: >-
+    ${{ github.event_name == 'release' &&
+    format('release-{0}', github.event.release.tag_name) ||
+    format('release-dispatch-{0}', inputs.channel) }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  # See build.yml: builds must not depend on the runner's timezone.
+  TZ: Etc/UTC
+
+jobs:
+  resolve:
+    name: Resolve version and matrix
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      channel: ${{ steps.resolve.outputs.channel }}
+      esphome: ${{ steps.resolve.outputs.esphome }}
+      update_latest: ${{ steps.resolve.outputs.update_latest }}
+      do_upload: ${{ steps.resolve.outputs.do_upload }}
+      create_release: ${{ steps.resolve.outputs.create_release }}
+      matrix: ${{ steps.resolve.outputs.matrix }}
+      upload_matrix: ${{ steps.resolve.outputs.upload_matrix }}
+      has_uploads: ${{ steps.resolve.outputs.has_uploads }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install pyyaml
+        run: pip install pyyaml
+
+      - name: Resolve
+        id: resolve
+        run: |
+          set -euo pipefail
+
+          # Everything the repo builds with is decided by this pin; the
+          # firmware version is derived from it.
+          ESPHOME=$(sed -n 's/^esphome==\([0-9][0-9.]*\)$/\1/p' requirements.txt)
+          if [ -z "$ESPHOME" ]; then
+            echo "::error::cannot parse the esphome pin from requirements.txt"
+            exit 1
+          fi
+          ESPESC=$(printf '%s' "$ESPHOME" | sed 's/\./\\./g')
+
+          git fetch --quiet --force origin 'refs/tags/*:refs/tags/*'
+
+          EVENT='${{ github.event_name }}'
+          TAG='${{ github.event.release.tag_name }}'
+          if [ "$EVENT" = "release" ]; then
+            # The beta channel does not exist on the firmware server yet;
+            # prereleases land on nightly until it does.
+            if [ '${{ github.event.release.prerelease }}' = 'true' ]; then
+              CHANNEL=nightly
+            else
+              CHANNEL=release
+            fi
+            DO_UPLOAD=true
+            CREATE_RELEASE=false
+            if [ "$CHANNEL" = release ]; then UPDATE_LATEST=true; else UPDATE_LATEST=false; fi
+          else
+            CHANNEL='${{ inputs.channel }}'
+            DO_UPLOAD=true
+            if [ '${{ inputs.dry_run }}' = 'true' ]; then DO_UPLOAD=false; fi
+            CREATE_RELEASE=$DO_UPLOAD
+            if [ "$CHANNEL" = release ]; then
+              UPDATE_LATEST='${{ inputs.update_latest }}'
+            else
+              UPDATE_LATEST=false
+            fi
+          fi
+
+          if [ "$CHANNEL" = release ]; then
+            # A human-made tag must be the bare esphome pin (the workflow picks
+            # the next subversion) or a full '<esphome>.<sub>' version.
+            if [ -n "$TAG" ] && [ "$TAG" != "$ESPHOME" ]; then
+              if ! printf '%s' "$TAG" | grep -qE "^${ESPESC}\.[0-9]+$"; then
+                echo "::error::release tag '$TAG' must be '$ESPHOME' or '$ESPHOME.<sub>' — the esphome part has to match the requirements.txt pin"
+                exit 1
+              fi
+              VERSION="$TAG"
+            else
+              MAX=$(git tag --list "${ESPHOME}.*" |
+                grep -E "^${ESPESC}\.[0-9]+$" | sort -V | tail -1 | awk -F. '{print $NF}')
+              N=0
+              [ -n "$MAX" ] && N=$MAX
+              VERSION="${ESPHOME}.$((N + 1))"
+            fi
+          else
+            # Nightly: <esphome>.<YYYYMMDD>.<attempt>, attempt auto-increments
+            # per date from the existing tags.
+            DATE=$(date -u +%Y%m%d)
+            MAX=$(git tag --list "${ESPHOME}.${DATE}.*" |
+              grep -E "^${ESPESC}\.${DATE}\.[0-9]+$" | sort -V | tail -1 | awk -F. '{print $NF}')
+            N=0
+            [ -n "$MAX" ] && N=$MAX
+            VERSION="${ESPHOME}.${DATE}.$((N + 1))"
+          fi
+
+          MATRIX=$(python scripts/firmware-matrix.py build)
+          UPLOAD_MATRIX=$(python scripts/firmware-matrix.py upload)
+          HAS_UPLOADS=$([ "$(echo "$UPLOAD_MATRIX" | jq '.include | length')" -gt 0 ] &&
+            echo true || echo false)
+
+          {
+            echo "version=$VERSION"
+            echo "channel=$CHANNEL"
+            echo "esphome=$ESPHOME"
+            echo "update_latest=$UPDATE_LATEST"
+            echo "do_upload=$DO_UPLOAD"
+            echo "create_release=$CREATE_RELEASE"
+            echo "matrix=$MATRIX"
+            echo "upload_matrix=$UPLOAD_MATRIX"
+            echo "has_uploads=$HAS_UPLOADS"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### Release plan"
+            echo
+            echo "| firmware version | esphome | channel | upload to fw | create release |"
+            echo "|---|---|---|---|---|"
+            echo "| $VERSION | $ESPHOME | $CHANNEL | $DO_UPLOAD | $CREATE_RELEASE |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  build:
+    name: Build ${{ matrix.name }}
+    needs: resolve
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.resolve.outputs.matrix) }}
+    env:
+      FW_VERSION: ${{ needs.resolve.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install ESPHome
+        run: pip install -r requirements.txt
+
+      - name: Cache toolchains
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            ~/.cache/esphome
+          key: toolchains-${{ hashFiles('requirements.txt') }}
+          restore-keys: toolchains-
+
+      - name: Seed secrets.yaml
+        run: cp secrets.yaml.example secrets.yaml
+
+      # The version reaches the firmware through its `version` substitution, so
+      # no config file is touched at build time.
+      - name: Compile
+        run: esphome -s version "$FW_VERSION" compile "${{ matrix.config }}"
+
+      - name: Stage firmware images
+        run: |
+          STEM="${{ matrix.name }}"
+          SRC=".esphome/build/${STEM}/.pioenvs/${STEM}"
+          mkdir firmware
+          cp "${SRC}/firmware.factory.bin" "firmware/${STEM}-${FW_VERSION}-factory.bin"
+          cp "${SRC}/firmware.ota.bin" "firmware/${STEM}-${FW_VERSION}-ota.bin"
+          # md5, not sha256: the firmware server hands it to OTA updates as
+          # info.md5, a different hash fails every update.
+          for f in firmware/*.bin; do
+            md5sum "$f" | awk '{print $1}' > "${f}.md5"
+          done
+          ls -lh firmware
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ matrix.name }}
+          path: firmware/*
+          if-no-files-found: error
+          retention-days: 7
+
+  upload-fw:
+    name: Upload ${{ matrix.name }}
+    needs: [resolve, build]
+    if: >-
+      needs.resolve.outputs.do_upload == 'true' &&
+      needs.resolve.outputs.has_uploads == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.resolve.outputs.upload_matrix) }}
+    env:
+      FW_VERSION: ${{ needs.resolve.outputs.version }}
+      FW_CHANNEL: ${{ needs.resolve.outputs.channel }}
+    steps:
+      - name: Require the firmware server URL
+        env:
+          FWSITE: ${{ secrets.FWSITE }}
+        run: |
+          # Without it the action falls back to its own default host, the test
+          # server — fail rather than publish there silently.
+          if [ -z "$FWSITE" ]; then
+            echo "::error::FWSITE secret is not set — refusing to guess the firmware server"
+            exit 1
+          fi
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: firmware-${{ matrix.name }}
+          path: firmware
+
+      - name: Upload the OTA image
+        uses: jethome-iot/actions/firmware-upload@master
+        with:
+          url: ${{ secrets.FWSITE }}
+          fullslug: JetHome.jxd.firmware.esphome.${{ matrix.device }}.${{ env.FW_CHANNEL }}
+          image_type: esp.ota
+          firmware_file: firmware/${{ matrix.name }}-${{ env.FW_VERSION }}-ota.bin
+          hashpgp_file: firmware/${{ matrix.name }}-${{ env.FW_VERSION }}-ota.bin.md5
+          version: ${{ env.FW_VERSION }}
+          force_overwrite: 'true'
+          generatefirmwareslot: 'true'
+          update_latest: 'false'
+          supported_devices: ${{ matrix.device }}
+          FWUPLOAD: ${{ secrets.FWUPLOAD }}
+
+      # The pointer rides the factory call: it may only name a version whose
+      # images are already up.
+      - name: Upload the factory image
+        uses: jethome-iot/actions/firmware-upload@master
+        with:
+          url: ${{ secrets.FWSITE }}
+          fullslug: JetHome.jxd.firmware.esphome.${{ matrix.device }}.${{ env.FW_CHANNEL }}
+          image_type: esp.bin
+          firmware_file: firmware/${{ matrix.name }}-${{ env.FW_VERSION }}-factory.bin
+          hashpgp_file: firmware/${{ matrix.name }}-${{ env.FW_VERSION }}-factory.bin.md5
+          version: ${{ env.FW_VERSION }}
+          force_overwrite: 'true'
+          generatefirmwareslot: 'true'
+          update_latest: ${{ needs.resolve.outputs.update_latest }}
+          supported_devices: ${{ matrix.device }}
+          FWUPLOAD: ${{ secrets.FWUPLOAD }}
+
+  assets:
+    name: Publish release assets
+    needs: [resolve, build]
+    if: >-
+      needs.resolve.outputs.create_release == 'true' ||
+      github.event_name == 'release'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      FW_VERSION: ${{ needs.resolve.outputs.version }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: firmware-*
+          merge-multiple: true
+          path: firmware
+
+      - name: Attach assets to the release
+        run: |
+          set -euo pipefail
+          REPO="${{ github.repository }}"
+          if [ '${{ github.event_name }}' = 'release' ]; then
+            TAG='${{ github.event.release.tag_name }}'
+            gh release upload "$TAG" firmware/* --repo "$REPO" --clobber
+          else
+            TAG='${{ needs.resolve.outputs.version }}'
+            NOTES="ESPHome ${{ needs.resolve.outputs.esphome }} firmware $FW_VERSION, built from ${{ github.sha }}."
+            if [ '${{ needs.resolve.outputs.channel }}' = 'nightly' ]; then
+              PRERELEASE="--prerelease"
+            else
+              PRERELEASE=""
+            fi
+            gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1 || \
+              gh release create "$TAG" --repo "$REPO" --title "$TAG" --notes "$NOTES" $PRERELEASE
+            gh release upload "$TAG" firmware/* --repo "$REPO" --clobber
+          fi
+          echo "Attached $(find firmware -maxdepth 1 -type f | wc -l) files to release $TAG" >> "$GITHUB_STEP_SUMMARY"
