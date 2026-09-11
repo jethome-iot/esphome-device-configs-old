@@ -28,8 +28,14 @@ text_sensor:
   - platform: ethernet_info
     ip_address:
       name: "Ethernet IP"
+      web_server:
+        sorting_group_id: group_network
+        sorting_weight: 1
       address_0:
         id: ip
     mac_address:
       name: "Ethernet MAC"
+      web_server:
+        sorting_group_id: group_network
+        sorting_weight: 2
       id: mac_eth

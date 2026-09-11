@@ -35,7 +35,13 @@ text_sensor:
   - platform: wifi_info
     ip_address:
       name: "WiFi IP"
+      web_server:
+        sorting_group_id: group_network
+        sorting_weight: 1
       id: ip
     mac_address:
       name: "WiFi MAC"
+      web_server:
+        sorting_group_id: group_network
+        sorting_weight: 2
       id: mac_wifi
