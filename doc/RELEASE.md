@@ -37,9 +37,9 @@ The firmware version is derived from the ESPHome pin in `requirements.txt`
 
 `<sub>` and `<attempt>` auto-increment from the existing git tags of previous
 releases (max + 1), so no counter lives anywhere: a re-release of the same
-esphome version bumps `<sub>`, a new esphome version resets it to 0. There is
-no beta channel on fw.jethome.com yet; prereleases go to `nightly` until one
-exists.
+esphome version bumps `<sub>`, and a new esphome version starts over at
+`.0`. Nightly attempts per date start at `.1`. There is no beta channel on
+fw.jethome.com yet; prereleases go to `nightly` until one exists.
 
 The version reaches the firmware through its `version` substitution
 (`esphome -s version <ver> compile ...`), so nothing in the configs is edited

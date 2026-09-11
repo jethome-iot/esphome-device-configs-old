@@ -257,6 +257,11 @@ def render(source: Path) -> tuple[Path, str] | None:
     return target, HEADER.format(source=source.name) + "\n" + body
 
 
+def manifest_configs() -> set[str]:
+    data = yaml.safe_load((REPO_ROOT / MANIFEST_NAME).read_text())
+    return {entry["config"] for entry in data["firmwares"]}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -265,6 +270,17 @@ def main() -> int:
         help="verify the generated files are up to date instead of writing them",
     )
     args = parser.parse_args()
+
+    # firmwares.yaml drives CI and releases; a device config missing from it
+    # would be served in dist/ but never built anywhere.
+    if missing := sorted(
+        {str(path.relative_to(REPO_ROOT)) for path in device_configs()}
+        - manifest_configs()
+    ):
+        raise SystemExit(
+            f"device configs missing from {MANIFEST_NAME} — CI and releases "
+            f"would skip them: {', '.join(missing)}"
+        )
 
     stale: list[Path] = []
     for source in device_configs():

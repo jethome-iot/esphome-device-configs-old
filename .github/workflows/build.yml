@@ -29,13 +29,16 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install pyyaml
-        run: pip install pyyaml
+      - name: Install the manifest tooling
+        run: pip install -r requirements-dev.txt
 
       # firmwares.yaml is the single source of truth for what gets built.
       - name: List device configs
         id: list
         run: |
+          # pipefail: a firmware-matrix.py failure must not read as an empty
+          # list — that would surface later as a cryptic fromJson error.
+          set -o pipefail
           configs=$(python scripts/firmware-matrix.py build |
             jq -c '[.include[].config]')
           echo "Found: $configs"

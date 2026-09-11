@@ -32,11 +32,13 @@ run-name: >-
   format('Release dispatch ({0})', inputs.channel) }}
 
 concurrency:
-  # Never cancel: a killed run leaves half-published firmware behind.
+  # Version allocation and the latest pointer are per channel: two runs
+  # publishing to one channel must not interleave. Dry runs publish nothing
+  # and get their own group so they never queue behind a publisher.
   group: >-
     ${{ github.event_name == 'release' &&
-    format('release-{0}', github.event.release.tag_name) ||
-    format('release-dispatch-{0}', inputs.channel) }}
+    (github.event.release.prerelease && 'release-nightly' || 'release-release') ||
+    format('release-{0}{1}', inputs.channel, inputs.dry_run && '-dryrun' || '') }}
   cancel-in-progress: false
 
 permissions:
@@ -67,11 +69,20 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install pyyaml
-        run: pip install pyyaml
+      - name: Install the manifest tooling
+        run: pip install -r requirements-dev.txt
 
       - name: Resolve
         id: resolve
+        env:
+          # Inputs arrive through env: tag names may contain single quotes,
+          # and they must never reach this script as inline interpolation.
+          EVENT: ${{ github.event_name }}
+          TAG: ${{ github.event.release.tag_name }}
+          PRERELEASE: ${{ github.event.release.prerelease }}
+          IN_CHANNEL: ${{ inputs.channel }}
+          IN_DRY_RUN: ${{ inputs.dry_run }}
+          IN_UPDATE_LATEST: ${{ inputs.update_latest }}
         run: |
           set -euo pipefail
 
@@ -86,12 +97,10 @@ jobs:
 
           git fetch --quiet --force origin 'refs/tags/*:refs/tags/*'
 
-          EVENT='${{ github.event_name }}'
-          TAG='${{ github.event.release.tag_name }}'
           if [ "$EVENT" = "release" ]; then
             # The beta channel does not exist on the firmware server yet;
             # prereleases land on nightly until it does.
-            if [ '${{ github.event.release.prerelease }}' = 'true' ]; then
+            if [ "$PRERELEASE" = "true" ]; then
               CHANNEL=nightly
             else
               CHANNEL=release
@@ -100,20 +109,26 @@ jobs:
             CREATE_RELEASE=false
             if [ "$CHANNEL" = release ]; then UPDATE_LATEST=true; else UPDATE_LATEST=false; fi
           else
-            CHANNEL='${{ inputs.channel }}'
+            CHANNEL=$IN_CHANNEL
             DO_UPLOAD=true
-            if [ '${{ inputs.dry_run }}' = 'true' ]; then DO_UPLOAD=false; fi
+            if [ "$IN_DRY_RUN" = "true" ]; then DO_UPLOAD=false; fi
             CREATE_RELEASE=$DO_UPLOAD
-            if [ "$CHANNEL" = release ]; then
-              UPDATE_LATEST='${{ inputs.update_latest }}'
-            else
-              UPDATE_LATEST=false
-            fi
+            if [ "$CHANNEL" = release ]; then UPDATE_LATEST=$IN_UPDATE_LATEST; else UPDATE_LATEST=false; fi
           fi
+
+          # Highest <n> among tags matching an anchored pattern, or the given
+          # default when nothing matches yet (grep exits 1 there — tolerated).
+          next_of() {
+            local glob pattern default found
+            glob=$1 pattern=$2 default=$3
+            found=$(git tag --list "$glob" |
+              { grep -E "$pattern" || true; } | sort -V | tail -1 | awk -F. '{print $NF}')
+            echo "${found:-$default}"
+          }
 
           if [ "$CHANNEL" = release ]; then
             # A human-made tag must be the bare esphome pin (the workflow picks
-            # the next subversion) or a full '<esphome>.<sub>' version.
+            # the next subversion, starting at .0) or a full '<esphome>.<sub>'.
             if [ -n "$TAG" ] && [ "$TAG" != "$ESPHOME" ]; then
               if ! printf '%s' "$TAG" | grep -qE "^${ESPESC}\.[0-9]+$"; then
                 echo "::error::release tag '$TAG' must be '$ESPHOME' or '$ESPHOME.<sub>' — the esphome part has to match the requirements.txt pin"
@@ -121,21 +136,15 @@ jobs:
               fi
               VERSION="$TAG"
             else
-              MAX=$(git tag --list "${ESPHOME}.*" |
-                grep -E "^${ESPESC}\.[0-9]+$" | sort -V | tail -1 | awk -F. '{print $NF}')
-              N=0
-              [ -n "$MAX" ] && N=$MAX
-              VERSION="${ESPHOME}.$((N + 1))"
+              LATEST=$(next_of "${ESPHOME}.*" "^${ESPESC}\.[0-9]+$" -1)
+              VERSION="${ESPHOME}.$((LATEST + 1))"
             fi
           else
             # Nightly: <esphome>.<YYYYMMDD>.<attempt>, attempt auto-increments
-            # per date from the existing tags.
+            # per date from the existing tags, starting at .1.
             DATE=$(date -u +%Y%m%d)
-            MAX=$(git tag --list "${ESPHOME}.${DATE}.*" |
-              grep -E "^${ESPESC}\.${DATE}\.[0-9]+$" | sort -V | tail -1 | awk -F. '{print $NF}')
-            N=0
-            [ -n "$MAX" ] && N=$MAX
-            VERSION="${ESPHOME}.${DATE}.$((N + 1))"
+            LATEST=$(next_of "${ESPHOME}.${DATE}.*" "^${ESPESC}\.${DATE}\.[0-9]+$" 0)
+            VERSION="${ESPHOME}.${DATE}.$((LATEST + 1))"
           fi
 
           MATRIX=$(python scripts/firmware-matrix.py build)
@@ -224,7 +233,10 @@ jobs:
 
   upload-fw:
     name: Upload ${{ matrix.name }}
-    needs: [resolve, build]
+    # After assets: the GitHub release and its version tag exist before
+    # anything reaches the firmware server, so a failed asset upload never
+    # leaves a half-published release behind.
+    needs: [resolve, assets]
     if: >-
       needs.resolve.outputs.do_upload == 'true' &&
       needs.resolve.outputs.has_uploads == 'true'
@@ -236,14 +248,21 @@ jobs:
       FW_VERSION: ${{ needs.resolve.outputs.version }}
       FW_CHANNEL: ${{ needs.resolve.outputs.channel }}
     steps:
-      - name: Require the firmware server URL
+      - name: Require the upload credentials
         env:
           FWSITE: ${{ secrets.FWSITE }}
+          FWUPLOAD: ${{ secrets.FWUPLOAD }}
         run: |
-          # Without it the action falls back to its own default host, the test
-          # server — fail rather than publish there silently.
+          # Without FWSITE the action falls back to its own default host, the
+          # test server — fail rather than publish there silently. Without
+          # FWUPLOAD the failure would only surface mid-upload, after the
+          # action's curl retries.
           if [ -z "$FWSITE" ]; then
             echo "::error::FWSITE secret is not set — refusing to guess the firmware server"
+            exit 1
+          fi
+          if [ -z "$FWUPLOAD" ]; then
+            echo "::error::FWUPLOAD secret is not set"
             exit 1
           fi
 
@@ -253,7 +272,7 @@ jobs:
           path: firmware
 
       - name: Upload the OTA image
-        uses: jethome-iot/actions/firmware-upload@master
+        uses: jethome-iot/actions/firmware-upload@99eaf1ffe7fad4972731e9489257f7811395963e
         with:
           url: ${{ secrets.FWSITE }}
           fullslug: JetHome.jxd.firmware.esphome.${{ matrix.device }}.${{ env.FW_CHANNEL }}
@@ -267,10 +286,11 @@ jobs:
           supported_devices: ${{ matrix.device }}
           FWUPLOAD: ${{ secrets.FWUPLOAD }}
 
-      # The pointer rides the factory call: it may only name a version whose
-      # images are already up.
+      # The factory call carries update_latest: within the action, the slot
+      # step applies that flag before it uploads anything, so the OTA image —
+      # the one the fleet fetches — has to be up first.
       - name: Upload the factory image
-        uses: jethome-iot/actions/firmware-upload@master
+        uses: jethome-iot/actions/firmware-upload@99eaf1ffe7fad4972731e9489257f7811395963e
         with:
           url: ${{ secrets.FWSITE }}
           fullslug: JetHome.jxd.firmware.esphome.${{ matrix.device }}.${{ env.FW_CHANNEL }}
@@ -302,22 +322,39 @@ jobs:
           path: firmware
 
       - name: Attach assets to the release
+        env:
+          EVENT: ${{ github.event_name }}
+          EVENT_TAG: ${{ github.event.release.tag_name }}
+          VERSION: ${{ needs.resolve.outputs.version }}
+          CHANNEL: ${{ needs.resolve.outputs.channel }}
+          ESPHOME: ${{ needs.resolve.outputs.esphome }}
+          SHA: ${{ github.sha }}
+          REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          REPO="${{ github.repository }}"
-          if [ '${{ github.event_name }}' = 'release' ]; then
-            TAG='${{ github.event.release.tag_name }}'
+          if [ "$EVENT" = "release" ]; then
+            TAG=$EVENT_TAG
             gh release upload "$TAG" firmware/* --repo "$REPO" --clobber
-          else
-            TAG='${{ needs.resolve.outputs.version }}'
-            NOTES="ESPHome ${{ needs.resolve.outputs.esphome }} firmware $FW_VERSION, built from ${{ github.sha }}."
-            if [ '${{ needs.resolve.outputs.channel }}' = 'nightly' ]; then
-              PRERELEASE="--prerelease"
-            else
-              PRERELEASE=""
+
+            # The firmware version allocated for this run is never the tag a
+            # human chose. Record it, or the next allocation picks the same
+            # number again and overwrites the server images. Creating the ref
+            # fails loudly if the version is somehow taken already. The
+            # dispatch path needs no such tag: its release is tagged with the
+            # version.
+            if ! gh api -X POST "repos/$REPO/git/refs" \
+              -f ref="refs/tags/$VERSION" -f sha="$SHA" >/dev/null; then
+              echo "::error::cannot create version tag $VERSION — it already exists or the API refused"
+              exit 1
             fi
+          else
+            TAG=$VERSION
+            NOTES="ESPHome $ESPHOME firmware $FW_VERSION, built from $SHA."
+            PRERELEASE_FLAG=""
+            if [ "$CHANNEL" = "nightly" ]; then PRERELEASE_FLAG="--prerelease"; fi
             gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1 || \
-              gh release create "$TAG" --repo "$REPO" --title "$TAG" --notes "$NOTES" $PRERELEASE
+              gh release create "$TAG" --repo "$REPO" --target "$SHA" \
+                --title "$TAG" --notes "$NOTES" $PRERELEASE_FLAG
             gh release upload "$TAG" firmware/* --repo "$REPO" --clobber
           fi
           echo "Attached $(find firmware -maxdepth 1 -type f | wc -l) files to release $TAG" >> "$GITHUB_STEP_SUMMARY"

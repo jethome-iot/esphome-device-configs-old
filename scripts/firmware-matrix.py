@@ -51,6 +51,19 @@ def entries() -> list[dict]:
                 "upload": upload,
             }
         )
+
+    names = [item["name"] for item in result]
+    if len(names) != len(set(names)):
+        raise SystemExit("firmwares.yaml: duplicate config entries")
+
+    # Two uploaded entries on one device would overwrite each other on the
+    # firmware server: same hierarchy level, same version, force_overwrite on.
+    uploaded = [item["device"] for item in result if item["upload"]]
+    if len(uploaded) != len(set(uploaded)):
+        raise SystemExit(
+            "firmwares.yaml: duplicate device among upload: true entries — "
+            "they would overwrite each other on the firmware server"
+        )
     return result
 
 
