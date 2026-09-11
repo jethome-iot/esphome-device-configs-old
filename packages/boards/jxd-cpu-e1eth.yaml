@@ -1,6 +1,7 @@
 esp32:
   board: esp32dev
   flash_size: 16MB
+  watchdog_timeout: 60s
   framework:
     type: esp-idf
     sdkconfig_options:
