@@ -13,6 +13,9 @@ switch:
   - platform: gpio
     name: "Relay 1"
     id: relay_1
+    web_server:
+      sorting_group_id: group_relays
+      sorting_weight: 1
     pin:
       pca9554: jxd_d6_r6_exp
       number: 0
@@ -22,6 +25,9 @@ switch:
   - platform: gpio
     name: "Relay 2"
     id: relay_2
+    web_server:
+      sorting_group_id: group_relays
+      sorting_weight: 2
     pin:
       pca9554: jxd_d6_r6_exp
       number: 1
@@ -31,6 +37,9 @@ switch:
   - platform: gpio
     name: "Relay 3"
     id: relay_3
+    web_server:
+      sorting_group_id: group_relays
+      sorting_weight: 3
     pin:
       pca9554: jxd_d6_r6_exp
       number: 2
@@ -40,6 +49,9 @@ switch:
   - platform: gpio
     name: "Relay 4"
     id: relay_4
+    web_server:
+      sorting_group_id: group_relays
+      sorting_weight: 4
     pin:
       pca9554: jxd_d6_r6_exp
       number: 3
@@ -49,6 +61,9 @@ switch:
   - platform: gpio
     name: "Relay 5"
     id: relay_5
+    web_server:
+      sorting_group_id: group_relays
+      sorting_weight: 5
     pin:
       pca9554: jxd_d6_r6_exp
       number: 4
@@ -58,6 +73,9 @@ switch:
   - platform: gpio
     name: "Relay 6"
     id: relay_6
+    web_server:
+      sorting_group_id: group_relays
+      sorting_weight: 6
     pin:
       pca9554: jxd_d6_r6_exp
       number: 5
@@ -68,6 +86,9 @@ binary_sensor:
   - platform: gpio
     name: "Input 1"
     id: input_1
+    web_server:
+      sorting_group_id: group_inputs
+      sorting_weight: 1
     pin:
       pca9554: jxd_d6_r6_exp
       number: 8
@@ -77,6 +98,9 @@ binary_sensor:
   - platform: gpio
     name: "Input 2"
     id: input_2
+    web_server:
+      sorting_group_id: group_inputs
+      sorting_weight: 2
     pin:
       pca9554: jxd_d6_r6_exp
       number: 9
@@ -86,6 +110,9 @@ binary_sensor:
   - platform: gpio
     name: "Input 3"
     id: input_3
+    web_server:
+      sorting_group_id: group_inputs
+      sorting_weight: 3
     pin:
       pca9554: jxd_d6_r6_exp
       number: 10
@@ -95,6 +122,9 @@ binary_sensor:
   - platform: gpio
     name: "Input 4"
     id: input_4
+    web_server:
+      sorting_group_id: group_inputs
+      sorting_weight: 4
     pin:
       pca9554: jxd_d6_r6_exp
       number: 11
@@ -104,6 +134,9 @@ binary_sensor:
   - platform: gpio
     name: "Input 5"
     id: input_5
+    web_server:
+      sorting_group_id: group_inputs
+      sorting_weight: 5
     pin:
       pca9554: jxd_d6_r6_exp
       number: 12
@@ -113,6 +146,9 @@ binary_sensor:
   - platform: gpio
     name: "Input 6"
     id: input_6
+    web_server:
+      sorting_group_id: group_inputs
+      sorting_weight: 6
     pin:
       pca9554: jxd_d6_r6_exp
       number: 13
