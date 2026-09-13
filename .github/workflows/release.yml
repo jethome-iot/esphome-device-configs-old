@@ -69,6 +69,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          # Same key as the Build workflow's lint job: whoever runs first
+          # primes the cache for both.
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
 
       - name: Install the manifest tooling
         run: pip install -r requirements-dev.txt

@@ -25,9 +25,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Same key as the lint job: whoever runs first primes the cache for
+      # both.
       - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
 
       - name: Install the manifest tooling
         run: pip install -r requirements-dev.txt
