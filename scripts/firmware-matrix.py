@@ -58,7 +58,9 @@ def entries() -> list[dict]:
 
     # Two uploaded entries on one device would overwrite each other on the
     # firmware server: same hierarchy level, same version, force_overwrite on.
-    uploaded = [item["device"] for item in result if item["upload"]]
+    # The server lowercases slugs when generating the hierarchy, so the check
+    # is case-insensitive to match it.
+    uploaded = [item["device"].lower() for item in result if item["upload"]]
     if len(uploaded) != len(set(uploaded)):
         raise SystemExit(
             "firmwares.yaml: duplicate device among upload: true entries — "

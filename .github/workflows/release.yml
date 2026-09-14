@@ -2,9 +2,10 @@ name: Release
 
 # Builds every firmware in firmwares.yaml and ships it. Full releases publish
 # to the `release` channel on fw.jethome.com; prereleases always go to
-# `nightly` while no beta channel exists, and manual runs pick the channel
-# (default release). Every built firmware lands on the GitHub release as an
-# asset; only the `upload: true` ones go to the server.
+# `nightly` while no beta channel exists, and manual runs default to `nightly`
+# too — the release channel is an explicit choice. Every built firmware lands
+# on the GitHub release as an asset; only the `upload: true` ones go to the
+# server.
 
 on:
   release:
@@ -17,7 +18,9 @@ on:
         options:
           - release
           - nightly
-        default: release
+        # The safe default: nightly never moves the release channel's latest
+        # pointer, so releasing takes an explicit channel choice.
+        default: nightly
       dry_run:
         description: 'Build only: attach nothing, upload nothing'
         type: boolean

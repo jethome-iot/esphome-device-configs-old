@@ -32,8 +32,8 @@ The firmware version is derived from the ESPHome pin in `requirements.txt`
 
 | Channel | When | Version format | Example |
 | --- | --- | --- | --- |
-| `release` | full releases | `<esphome>.<sub>` | `2026.8.2.0` |
-| `nightly` | prereleases; manual dispatch with `channel: nightly` | `<esphome>.<YYYYMMDD>.<attempt>` | `2026.8.2.20260911.1` |
+| `release` | full releases; manual dispatch with `channel: release` | `<esphome>.<sub>` | `2026.8.2.0` |
+| `nightly` | prereleases; manual dispatch (default channel) | `<esphome>.<YYYYMMDD>.<attempt>` | `2026.8.2.20260911.1` |
 
 `<sub>` and `<attempt>` auto-increment from the existing git tags of previous
 releases (max + 1), so no counter lives anywhere: a re-release of the same
@@ -52,9 +52,11 @@ at build time.
 2. Go to **Actions → Release → Run workflow**:
    - first with `dry_run` on: builds everything, uploads artifacts, touches
      nothing;
-   - then with `dry_run` off: the workflow computes the version, creates the
-     GitHub release (prerelease for the `nightly` channel), attaches all
-     binaries, and uploads the `upload: true` firmwares to the server.
+   - then with `dry_run` off and `channel: release` (the dispatch default is
+     `nightly` — the safe side: it never moves the release channel's `latest`
+     pointer): the workflow computes the version, creates the GitHub release,
+     attaches all binaries, and uploads the `upload: true` firmwares to the
+     server.
 3. Alternatively, create the release on GitHub yourself. A full release tag
    must be `<esphome>` (workflow picks the next subversion) or
    `<esphome>.<sub>` — the esphome part must match the `requirements.txt`
