@@ -40,10 +40,12 @@ jobs:
         run: |
           set -euo pipefail
           LATEST=$(gh api repos/esphome/esphome/releases/latest --jq .tag_name)
-          case "$LATEST" in
-            [0-9]*.[0-9]*.[0-9]*) ;;
-            *) echo "::error::unexpected esphome release tag: $LATEST"; exit 1 ;;
-          esac
+          # A strict regex, not a glob: the tag flows into shell commands
+          # downstream, and glob `*` would pass shell metacharacters through.
+          if ! printf '%s' "$LATEST" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::unexpected esphome release tag: $LATEST"
+            exit 1
+          fi
 
           PIN=$(sed -n 's/^esphome==\([0-9][0-9.]*\)$/\1/p' requirements.txt)
           if [ -z "$PIN" ]; then
@@ -110,8 +112,11 @@ jobs:
 
       - name: Install the new ESPHome
         # The candidate version, not the pinned one: this build answers
-        # whether the pin can be bumped.
-        run: pip install "esphome==${{ needs.check.outputs.latest }}"
+        # whether the pin can be bumped. It arrives through env — upstream
+        # data never reaches this script as inline interpolation.
+        env:
+          ESPHOME_CANDIDATE: ${{ needs.check.outputs.latest }}
+        run: pip install "esphome==$ESPHOME_CANDIDATE"
 
       - name: Seed secrets.yaml
         run: cp secrets.yaml.example secrets.yaml

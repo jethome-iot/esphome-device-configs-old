@@ -53,8 +53,11 @@ that make up the device. Everything else lives under `packages/`, split by role:
 
 The BDF display fonts in `fonts/` come from [IT-Studio-Rech/bdf-fonts](https://github.com/IT-Studio-Rech/bdf-fonts).
 
-A weekly check compiles the firmwares against new upstream ESPHome releases and
-opens an issue with the results.
+The firmwares this repository builds are listed in `firmwares.yaml` — the single
+source of truth for CI and for the release pipeline, with a per-firmware flag
+for publishing to [fw.jethome.com](https://fw.jethome.com). See the
+[Release Workflow](doc/RELEASE.md). A weekly check compiles the firmwares
+against new upstream ESPHome releases and opens an issue with the results.
 
 ### Generated icons (`res/`)
 
@@ -261,6 +264,7 @@ page, anything else on the main page.
 
 - **[OneWire Temperature Sensors](doc/ONEWIRE_WORKFLOW.md)**: How DS18B20 sensors get their slots, and how to reassign them
 - **[WiFi Setup](doc/WIFI_SETUP.md)**: Provisioning the WiFi variant through its captive portal
+- **[Release Workflow](doc/RELEASE.md)**: CI, channels, firmware versioning, and publishing to fw.jethome.com
 
 ## Modbus RTU Server
 
