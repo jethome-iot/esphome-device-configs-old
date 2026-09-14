@@ -74,7 +74,21 @@ jobs:
 
       # The ESP-IDF toolchain is ~2 GB and identical across configs, so key the
       # cache on the ESPHome pin rather than on the config being built.
+      # PRs restore only: a PR-scoped save is invisible to other PRs and burns
+      # the shared 10 GB quota — on an esphome bump every matrix job would
+      # upload its own multi-GB archive. Master runs are the single writer.
+      - name: Restore toolchain cache
+        if: github.event_name == 'pull_request'
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            ~/.platformio
+            ~/.cache/esphome
+          key: toolchains-${{ hashFiles('requirements.txt') }}
+          restore-keys: toolchains-
+
       - name: Cache toolchains
+        if: github.event_name != 'pull_request'
         uses: actions/cache@v6
         with:
           path: |
