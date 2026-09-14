@@ -55,7 +55,7 @@ env:
 jobs:
   resolve:
     name: Resolve version and matrix
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ubuntu-latest]
     outputs:
       version: ${{ steps.resolve.outputs.version }}
       channel: ${{ steps.resolve.outputs.channel }}
@@ -234,7 +234,7 @@ jobs:
   build:
     name: Build ${{ matrix.name }}
     needs: resolve
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ubuntu-latest]
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.resolve.outputs.matrix) }}
@@ -299,7 +299,7 @@ jobs:
     if: >-
       needs.resolve.outputs.do_upload == 'true' &&
       needs.resolve.outputs.has_uploads == 'true'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ubuntu-latest]
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.resolve.outputs.upload_matrix) }}
@@ -398,7 +398,7 @@ jobs:
     if: >-
       needs.resolve.outputs.create_release == 'true' ||
       github.event_name == 'release'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ubuntu-latest]
     env:
       GH_TOKEN: ${{ github.token }}
       FW_VERSION: ${{ needs.resolve.outputs.version }}
