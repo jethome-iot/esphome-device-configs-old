@@ -56,7 +56,8 @@ The BDF display fonts in `fonts/` come from [IT-Studio-Rech/bdf-fonts](https://g
 The firmwares this repository builds are listed in `firmwares.yaml` — the single
 source of truth for CI and for the release pipeline, with a per-firmware flag
 for publishing to [fw.jethome.com](https://fw.jethome.com). See the
-[Release Workflow](doc/RELEASE.md).
+[Release Workflow](doc/RELEASE.md). A weekly check compiles the firmwares
+against new upstream ESPHome releases and opens an issue with the results.
 
 ### Generated icons (`res/`)
 
