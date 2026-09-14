@@ -26,7 +26,7 @@ env:
 jobs:
   check:
     name: Check for a new ESPHome release
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ubuntu-latest]
     outputs:
       latest: ${{ steps.check.outputs.latest }}
       known: ${{ steps.check.outputs.known }}
@@ -66,7 +66,7 @@ jobs:
     name: Generate build matrix
     needs: check
     if: needs.check.outputs.known == 'false'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ubuntu-latest]
     outputs:
       matrix: ${{ steps.matrix.outputs.matrix }}
     steps:
@@ -94,7 +94,7 @@ jobs:
     name: Build with esphome ${{ needs.check.outputs.latest }}
     needs: [check, build-matrix]
     if: needs.check.outputs.known == 'false'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ubuntu-latest]
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.build-matrix.outputs.matrix) }}
@@ -151,7 +151,7 @@ jobs:
     if: >-
       ${{ !cancelled() && needs.check.outputs.known == 'false' &&
       needs.build.result != 'skipped' }}
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ubuntu-latest]
     steps:
       - uses: actions/checkout@v7
 
