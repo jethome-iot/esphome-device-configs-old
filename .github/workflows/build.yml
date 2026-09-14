@@ -74,11 +74,12 @@ jobs:
 
       # The ESP-IDF toolchain is ~2 GB and identical across configs, so key the
       # cache on the ESPHome pin rather than on the config being built.
-      # PRs restore only: a PR-scoped save is invisible to other PRs and burns
-      # the shared 10 GB quota — on an esphome bump every matrix job would
-      # upload its own multi-GB archive. Master runs are the single writer.
+      # Only master writes: saves from PRs and from workflow_dispatches off
+      # master are branch-scoped — invisible to other runs while burning the
+      # shared 10 GB quota, and on an esphome bump every matrix job would
+      # upload its own multi-GB archive for nothing.
       - name: Restore toolchain cache
-        if: github.event_name == 'pull_request'
+        if: github.ref != 'refs/heads/master'
         uses: actions/cache/restore@v6
         with:
           path: |
@@ -88,7 +89,7 @@ jobs:
           restore-keys: toolchains-
 
       - name: Cache toolchains
-        if: github.event_name != 'pull_request'
+        if: github.ref == 'refs/heads/master'
         uses: actions/cache@v6
         with:
           path: |

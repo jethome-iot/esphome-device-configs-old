@@ -118,10 +118,11 @@ jobs:
           ESPHOME_CANDIDATE: ${{ needs.check.outputs.latest }}
         run: pip install "esphome==$ESPHOME_CANDIDATE"
 
-      # The candidate pins the toolchain exactly; the prefix fallback reuses
-      # the Build workflow's entry whenever the candidate matches the pin.
-      # This workflow only runs from the default branch (schedule, dispatch),
-      # so its saves land in the shared scope.
+      # The exact key makes repeat runs against the same candidate a hit; the
+      # prefix fallback seeds a new candidate from the most recent toolchains
+      # entry (a prior candidate's or the Build workflow's), and platformio
+      # downloads only the gaps. This workflow only runs from the default
+      # branch (schedule, dispatch), so saves land in the shared scope.
       - name: Cache toolchains
         uses: actions/cache@v6
         with:
