@@ -5,12 +5,14 @@ substitutions:
   version: 1.0.0
   # Paths relative to this file.
   boards: ../include/boards
+  components: ../components
   features: ../include/features
 
 packages:
   # The CPU board and its features, as in esphome-device-configs.
   board: !include ${boards}/jxd-cpu-e1eth.yaml
   display_off: !include ${features}/display-off.yaml
+  fram: !include ${features}/fram.yaml
   i2c: !include ${features}/i2c.yaml
   rtc_time: !include ${features}/rtc-time.yaml
   vin_measure: !include ${features}/vin-measure.yaml
@@ -91,13 +93,10 @@ dashboard_import:
   package_import_url: github://jethome-iot/esphome-configs/JXD/jxd-pm380-e1eth.yaml@master
   import_full_config: true
 
-# i2c_eeprom and the CPU board EEPROM eeprom_cpu come with the board package
+# i2c_eeprom (components/i2c_eeprom) and the CPU board EEPROM eeprom_cpu come with the board
+# package, the CPU board FRAM fram_cpu with features/fram.yaml
 i2c_eeprom:
 # peripheral board eeprom
   - id: eeprom_per
     size: 64KB # size in Kbits
     address: 0x56
-# cpu board fram
-  - id: fram_cpu
-    size: 64KB # size in Kbits
-    address: 0x52

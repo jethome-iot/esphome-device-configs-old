@@ -1,11 +1,16 @@
 # Consumed energy counters on top of the ATM90E32 forward active energy (sum of the phases).
-# The chip's counters start from zero on every boot, so the totals are kept in the CPU board
-# FRAM (fram_cpu), written every 10 s.
-# Needs jxd-d3-pm3-3.yaml, fram_cpu and the pcf8563_time time source in the device config.
+# The chip's counters start from zero on every boot, so the counters are kept in the CPU board
+# FRAM, in fram_store_counters of features/fram.yaml, written every 10 s. Which slot holds what:
+# components/pm_energy/pm_energy.h.
+# Needs jxd-d3-pm3-3.yaml, features/fram.yaml and features/rtc-time.yaml (pcf8563_time) in the
+# device config.
 
-esphome:
-  includes:
-    - ../include/jxd-pm380-energy-store.h
+external_components:
+  - source: ${components}
+    components: [pm_energy]
+
+# Only brings in the record types the scripts below use
+pm_energy:
 
 packages:
   # User counters, each with its own reset button
@@ -117,32 +122,43 @@ globals:
     type: bool
     initial_value: "false"
 
-# EnergyStore is only the FRAM image: ESPHome adds includes after the globals,
-# so the header type cannot be a global itself
 script:
   - id: energy_load
     then:
       - lambda: |-
-          EnergyStore stored;
-          if (!id(fram_cpu)->get(ENERGY_STORE_ADDRESS, reinterpret_cast<uint8_t *>(&stored), sizeof(stored))) {
+          using namespace pm_energy;
+          // The first use checks the store's superblock and formats a blank or stale store
+          if (!id(fram_store_counters)->is_ready()) {
+            static bool reported = false;
+            if (!reported)
+              ESP_LOGE("energy", "The counters store in FRAM is not available, nothing is counted");
+            reported = true;
+            return;
+          }
+          fram_store::FramSlot *counter_slots[3] = {id(fram_counter_00), id(fram_counter_01), id(fram_counter_02)};
+          std::array<CounterRecord, 3> counters;
+          PeriodsRecord periods;
+          LoadTally tally;
+          for (size_t i = 0; i < counters.size(); i++)
+            tally.load(counter_slots[i], counters[i]);
+          tally.load(id(fram_counter_03), periods);
+          if (tally.failed != 0) {
             // Keep the FRAM untouched and try again on the next pass
             ESP_LOGW("energy", "Reading the counters from FRAM failed");
             return;
           }
-          if (stored.magic == ENERGY_STORE_MAGIC && stored.version == ENERGY_STORE_VERSION &&
-              stored.crc == energy_store_crc(stored)) {
-            id(energy_slot_wh) = stored.slot_wh;
-            id(energy_slot_time) = stored.slot_time;
-            id(energy_today_wh) = stored.today_wh;
-            id(energy_yesterday_wh) = stored.yesterday_wh;
-            id(energy_day_key) = stored.day_key;
-            id(energy_month_wh) = stored.month_wh;
-            id(energy_last_month_wh) = stored.last_month_wh;
-            id(energy_month_key) = stored.month_key;
-            ESP_LOGI("energy", "Counters loaded from FRAM");
-          } else {
-            ESP_LOGW("energy", "No valid counters in FRAM, starting from zero");
+          for (size_t i = 0; i < counters.size(); i++) {
+            id(energy_slot_wh)[i] = counters[i].wh;
+            id(energy_slot_time)[i] = counters[i].reset_time;
           }
+          id(energy_today_wh) = periods.today_wh;
+          id(energy_yesterday_wh) = periods.yesterday_wh;
+          id(energy_day_key) = periods.day_key;
+          id(energy_month_wh) = periods.month_wh;
+          id(energy_last_month_wh) = periods.last_month_wh;
+          id(energy_month_key) = periods.month_key;
+          ESP_LOGI("energy", "Counters loaded from FRAM: %u records, %u empty and starting from zero",
+                   tally.loaded, tally.blank);
           id(energy_loaded) = true;
 
   - id: energy_save
@@ -150,29 +166,35 @@ script:
       - lambda: |-
           if (!id(energy_loaded))
             return;
-          EnergyStore store{};
-          store.slot_wh = id(energy_slot_wh);
-          store.slot_time = id(energy_slot_time);
-          store.today_wh = id(energy_today_wh);
-          store.yesterday_wh = id(energy_yesterday_wh);
-          store.day_key = id(energy_day_key);
-          store.month_wh = id(energy_month_wh);
-          store.last_month_wh = id(energy_last_month_wh);
-          store.month_key = id(energy_month_key);
-          store.magic = ENERGY_STORE_MAGIC;
-          store.version = ENERGY_STORE_VERSION;
-          store.crc = energy_store_crc(store);
-          if (!id(fram_cpu)->put(ENERGY_STORE_ADDRESS, reinterpret_cast<const uint8_t *>(&store), sizeof(store)))
+          using namespace pm_energy;
+          // What each slot last took: a record that did not change is not written again
+          static std::array<CounterRecord, 3> saved_counters{};
+          static PeriodsRecord saved_periods{};
+          fram_store::FramSlot *counter_slots[3] = {id(fram_counter_00), id(fram_counter_01), id(fram_counter_02)};
+          bool ok = true;
+          for (size_t i = 0; i < saved_counters.size(); i++) {
+            const auto counter = CounterRecord::of(id(energy_slot_wh)[i], id(energy_slot_time)[i]);
+            ok &= save_record(counter_slots[i], counter, saved_counters[i]);
+          }
+          auto periods = PeriodsRecord::blank();
+          periods.today_wh = id(energy_today_wh);
+          periods.yesterday_wh = id(energy_yesterday_wh);
+          periods.day_key = id(energy_day_key);
+          periods.month_wh = id(energy_month_wh);
+          periods.last_month_wh = id(energy_last_month_wh);
+          periods.month_key = id(energy_month_key);
+          ok &= save_record(id(fram_counter_03), periods, saved_periods);
+          if (!ok)
             ESP_LOGW("energy", "Writing the counters to FRAM failed");
 
-  # Factory reset, right before the reboot: a zero magic makes the FRAM image invalid, so the
-  # counters start from zero as on a new device. No save can write them back meanwhile.
+  # Factory reset, right before the reboot: formatting fram_store_counters empties every slot, so
+  # the counters start from zero as on a new device; a format cut short by a power loss is
+  # finished at the next boot. No save can write them back meanwhile.
   - id: energy_clear
     then:
       - lambda: |-
           id(energy_loaded) = false;
-          EnergyStore blank{};
-          if (!id(fram_cpu)->put(ENERGY_STORE_ADDRESS, reinterpret_cast<const uint8_t *>(&blank), sizeof(blank)))
+          if (!id(fram_store_counters)->format())
             ESP_LOGW("energy", "Clearing the counters in FRAM failed");
 
 button:

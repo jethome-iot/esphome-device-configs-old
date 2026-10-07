@@ -27,11 +27,12 @@ ota:
 preferences:
   flash_write_interval: 5s
 
-# Here: i2c_eeprom is pilotak's, not the vendored copy: the FRAM energy records still go
-# through it. No jethome_board_info (it needs the vendored i2c_eeprom) and no
-# status_indicator: red_led stays the switch the PM boot blink and tests/ drive.
+# Here: no jethome_board_info or status_indicator. jethome_board_info write-protects eeprom_cpu,
+# which the self-test in tests/test-i2c.yaml still writes, and nothing here reads the identity
+# yet; status_indicator would make red_led something other than the switch the PM boot blink
+# and tests/ drive. Both wait for their own decisions.
 external_components:
-  - source: github://pilotak/esphome-eeprom
+  - source: ${components}
     components: [i2c_eeprom]
 
 i2c_eeprom:

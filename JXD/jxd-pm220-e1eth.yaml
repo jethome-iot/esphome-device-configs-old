@@ -5,12 +5,14 @@ substitutions:
   version: 1.0.0
   # Paths relative to this file.
   boards: ../include/boards
+  components: ../components
   features: ../include/features
 
 packages:
   # The CPU board and its features, as in esphome-device-configs.
   board: !include ${boards}/jxd-cpu-e1eth.yaml
   display_off: !include ${features}/display-off.yaml
+  fram: !include ${features}/fram.yaml
   i2c: !include ${features}/i2c.yaml
   rtc_time: !include ${features}/rtc-time.yaml
   vin_measure: !include ${features}/vin-measure.yaml
