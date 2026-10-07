@@ -46,7 +46,7 @@ class DisplayMenuComponent : public Component {
   void reset_menu();
   // Check that current item is root
   bool is_at_main() const { return this->displayed_item_ == this->root_item_; }
-  
+
   void show();
   void hide();
 

@@ -36,6 +36,8 @@ repos:
     rev: v1.37.1
     hooks:
       - id: yamllint
+        # .clang-format is YAML by syntax only: ESPHome's file, kept verbatim
+        exclude: ^\.clang-format$
   - repo: https://github.com/pre-commit/mirrors-clang-format
     rev: v13.0.1
     hooks:
