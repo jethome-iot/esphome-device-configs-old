@@ -89,7 +89,8 @@ uart:
 
 sensor:
   # Channel energy is the chip pulse counter in kWh: not cleared on read, it restarts only
-  # with the chip itself, not with the ESP
+  # with the chip itself, not with the ESP. It only feeds the counters in jxd-pm220-energy.yaml,
+  # so it stays out of HA.
   - platform: bl0906
     # The 60 s default is too slow for the screen
     update_interval: 5s
@@ -116,6 +117,7 @@ sensor:
       energy:
         name: 'Energy_1'
         id: energy_1
+        internal: true
         filters:
           - multiply: ${divider_correction}
     channel_2:
@@ -130,6 +132,7 @@ sensor:
       energy:
         name: 'Energy_2'
         id: energy_2
+        internal: true
         filters:
           - multiply: ${divider_correction}
     channel_3:
@@ -144,6 +147,7 @@ sensor:
       energy:
         name: 'Energy_3'
         id: energy_3
+        internal: true
         filters:
           - multiply: ${divider_correction}
     channel_4:
@@ -158,6 +162,7 @@ sensor:
       energy:
         name: 'Energy_4'
         id: energy_4
+        internal: true
         filters:
           - multiply: ${divider_correction}
     channel_5:
@@ -172,6 +177,7 @@ sensor:
       energy:
         name: 'Energy_5'
         id: energy_5
+        internal: true
         filters:
           - multiply: ${divider_correction}
     channel_6:
@@ -186,12 +192,9 @@ sensor:
       energy:
         name: 'Energy_6'
         id: energy_6
+        internal: true
         filters:
           - multiply: ${divider_correction}
-    total_energy:
-      name: 'Total_Energy'
-      filters:
-        - multiply: ${divider_correction}
     total_power:
       name: 'Total_Power'
       id: total_power
