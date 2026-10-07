@@ -106,6 +106,16 @@ graphical_display_menu:
         - !include {file: jxd-pm380-energy-slot-menu.yaml, vars: {slot: "1", index: "0"}}
         - !include {file: jxd-pm380-energy-slot-menu.yaml, vars: {slot: "2", index: "1"}}
         - !include {file: jxd-pm380-energy-slot-menu.yaml, vars: {slot: "3", index: "2"}}
+        - type: menu
+          text: "Reset all"
+          items:
+            - type: label
+              text: "Reset all?"
+            - type: command
+              text: "Yes"
+              on_value:
+                - button.press: reset_all_energy_counters
+                - display_menu.back:
         - !include {file: jxd-pm380-energy-menu-item.yaml, vars: {label: "Today", wh: "id(energy_today_wh)"}}
         - !include {file: jxd-pm380-energy-menu-item.yaml, vars: {label: "Yesterday", wh: "id(energy_yesterday_wh)"}}
         - !include {file: jxd-pm380-energy-menu-item.yaml, vars: {label: "Month", wh: "id(energy_month_wh)"}}
@@ -234,6 +244,7 @@ graphical_display_menu:
             - type: command
               text: "Yes"
               on_value:
+                - script.execute: energy_clear
                 - lambda: |-
                     global_preferences->reset();
                     App.safe_reboot();

@@ -28,10 +28,12 @@ text_sensor:
       return ESPTime::from_epoch_utc(since).strftime("%Y-%m-%dT%H:%M:%S+00:00");
 
 button:
+  # HA presses a button without asking, so keep it off the default dashboard
   - platform: template
     name: "Reset Energy Channel ${channel}"
     id: reset_energy_channel_${channel}
     icon: mdi:counter
+    entity_category: config
     on_press:
       - lambda: |-
           if (!id(energy_loaded))

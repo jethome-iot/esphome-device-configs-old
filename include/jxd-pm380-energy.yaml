@@ -153,6 +153,39 @@ script:
           if (!id(fram_cpu)->put(ENERGY_STORE_ADDRESS, reinterpret_cast<const uint8_t *>(&store), sizeof(store)))
             ESP_LOGW("energy", "Writing the counters to FRAM failed");
 
+  # Factory reset, right before the reboot: a zero magic makes the FRAM image invalid, so the
+  # counters start from zero as on a new device. No save can write them back meanwhile.
+  - id: energy_clear
+    then:
+      - lambda: |-
+          id(energy_loaded) = false;
+          EnergyStore blank{};
+          if (!id(fram_cpu)->put(ENERGY_STORE_ADDRESS, reinterpret_cast<const uint8_t *>(&blank), sizeof(blank)))
+            ESP_LOGW("energy", "Clearing the counters in FRAM failed");
+
+button:
+  # HA presses a button without asking, so keep it off the default dashboard
+  - platform: template
+    name: "Reset All Energy Counters"
+    id: reset_all_energy_counters
+    icon: mdi:counter
+    entity_category: config
+    on_press:
+      - lambda: |-
+          if (!id(energy_loaded))
+            return;
+          auto now = id(pcf8563_time).now();
+          const uint32_t since = now.is_valid() ? now.timestamp : 0;
+          id(energy_slot_wh).fill(0);
+          id(energy_slot_time).fill(since);
+      - script.execute: energy_save
+      - lambda: |-
+          PollingComponent *counters[] = {id(energy_counter_1), id(energy_counter_1_reset_time),
+                                          id(energy_counter_2), id(energy_counter_2_reset_time),
+                                          id(energy_counter_3), id(energy_counter_3_reset_time)};
+          for (auto *counter : counters)
+            counter->update();
+
 interval:
   - interval: 10s
     then:
