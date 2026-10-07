@@ -22,8 +22,8 @@ struct ChannelEnergyStore {
 static_assert(sizeof(ChannelEnergyStore) == 104, "ChannelEnergyStore layout changed, bump CHANNEL_STORE_VERSION");
 
 static const uint32_t CHANNEL_STORE_MAGIC = 0x424C3036;  // "BL06"
-// 1 held only the chip readings
-static const uint16_t CHANNEL_STORE_VERSION = 2;
+// 1 held only the chip readings, 2 kept them without the voltage divider correction
+static const uint16_t CHANNEL_STORE_VERSION = 3;
 // After the EnergyStore image at 0x0100, with room for it to grow
 static const uint16_t CHANNEL_STORE_ADDRESS = 0x0180;
 
