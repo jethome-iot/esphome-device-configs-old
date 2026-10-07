@@ -1,0 +1,174 @@
+# Front panel assumed to be the PM380 one (JXD-DISPLAY2 rev 1.0), not checked on PM220.
+# Needs jxd-r6-e1eth-buttons.yaml (joystick), jxd-pm220-e1eth-base.yaml (readings) and
+# jxd-pm220-energy.yaml (counters) in the device config.
+# On the main page LEFT opens the status page, UP the energy counters, DOWN the channels,
+# RIGHT the clock, CENTER the menu.
+
+script:
+  - id: check_blank_page
+    then:
+      - lambda: |-
+          id(current_display_off_s) = 0;
+          if (id(display1).get_active_page() == id(blank_page)) {
+            id(display1).show_page(id(main_page));
+          }
+
+font:
+  - file: ../fonts/7x14-mod2.bdf
+    id: f7x14_mod2
+
+  - file: ../fonts/6x12.bdf
+    id: f6x12
+
+  - file: ../fonts/5x7.bdf
+    id: f5x7
+
+  - file: ../fonts/spleen-12x24.bdf
+    id: big_label_font
+
+packages:
+  status_page: !include {file: jxd-pm220-status-page.yaml, vars: {display_settings_id: display1}}
+  energy_page: !include {file: jxd-pm220-energy-page.yaml, vars: {display_settings_id: display1}}
+  channels_page: !include {file: jxd-pm220-channels-page.yaml, vars: {display_settings_id: display1}}
+  time_page: !include {file: jxd-r6-time-page.yaml, vars: {display_settings_id: display1}}
+  buttons: !include {file: jxd-pm220-e1eth-buttons.yaml, vars: {display_settings_id: display1}}
+  display_off: !include {file: display-off.yaml, vars: {display_settings_id: display1}}
+
+display:
+  - platform: ssd1306_i2c
+    id: display1
+    model: "SSD1306_128X64"
+    address: 0x3C
+    update_interval: 200ms
+    pages:
+      - id: main_page
+        lambda: |-
+          uint8_t mac[6];
+          get_mac_address_raw(mac);
+          // Short MAC suffix like on JXD; the device name itself gets ESPHome's 6-digit one
+          std::string name = "${friendly_name}" + str_snprintf("-%02X%02X", 5, mac[4], mac[5]);
+
+          const int row_size = 15;
+          int y = (64 - row_size * 4) / 2;
+
+          it.printf(0, y, id(f6x12), "%s", name.c_str());
+          y += row_size;
+          it.printf(0, y, id(f6x12), "IP: %s", id(ip).state.c_str());
+          y += row_size;
+          // Chip total over the six channels
+          const float power = id(total_power).state;
+          if (std::isnan(power)) {
+            it.print(0, y, id(f6x12), "P: --");
+          } else {
+            it.printf(0, y, id(f6x12), "P: %.0f W", power);
+          }
+          y += row_size;
+
+          // User counter #1; all counters are on the UP page
+          const double kwh = id(energy_slot_wh)[0] / 1000.0;
+          it.printf(0, y, id(f6x12), "E: %.*f kWh", kwh < 10000 ? 2 : 0, kwh);
+
+      - id: blank_page
+        lambda: return;
+
+graphical_display_menu:
+  id: display_menu
+  font: f7x14_mod2
+  display: display1
+  active: false
+  fill_row: true
+  shrink_label: true
+  restore_page: false
+  right_for_menu_enter: false
+  on_redraw:
+    then:
+      component.update: display1
+  mode: joystick
+  items:
+    - type: menu
+      text: "Channels"
+      items:
+        - !include {file: jxd-pm220-channel-menu.yaml, vars: {channel: "1", index: "0"}}
+        - !include {file: jxd-pm220-channel-menu.yaml, vars: {channel: "2", index: "1"}}
+        - !include {file: jxd-pm220-channel-menu.yaml, vars: {channel: "3", index: "2"}}
+        - !include {file: jxd-pm220-channel-menu.yaml, vars: {channel: "4", index: "3"}}
+        - !include {file: jxd-pm220-channel-menu.yaml, vars: {channel: "5", index: "4"}}
+        - !include {file: jxd-pm220-channel-menu.yaml, vars: {channel: "6", index: "5"}}
+
+    # Counters from jxd-pm220-energy.yaml
+    - type: menu
+      text: "Energy"
+      items:
+        - !include {file: jxd-pm220-energy-slot-menu.yaml, vars: {slot: "1", index: "0"}}
+        - !include {file: jxd-pm220-energy-slot-menu.yaml, vars: {slot: "2", index: "1"}}
+        - !include {file: jxd-pm220-energy-slot-menu.yaml, vars: {slot: "3", index: "2"}}
+        - !include {file: jxd-pm220-energy-menu-item.yaml, vars: {label: "Today", wh: "id(energy_today_wh)"}}
+        - !include {file: jxd-pm220-energy-menu-item.yaml, vars: {label: "Yesterday", wh: "id(energy_yesterday_wh)"}}
+        - !include {file: jxd-pm220-energy-menu-item.yaml, vars: {label: "Month", wh: "id(energy_month_wh)"}}
+        - !include {file: jxd-pm220-energy-menu-item.yaml, vars: {label: "Last month", wh: "id(energy_last_month_wh)"}}
+
+    - type: menu
+      text: "Info"
+      id: info_submenu
+      items:
+        - type: value
+          text: "Voltage"
+          value_lambda: |-
+            float v = id(line_voltage).state;
+            return std::isnan(v) ? std::string("--") : str_sprintf("%.1f V", v);
+        - type: value
+          text: "Freq"
+          value_lambda: |-
+            float v = id(line_frequency).state;
+            return std::isnan(v) ? std::string("--") : str_sprintf("%.2f Hz", v);
+        - type: value
+          text: "Meter"
+          value_lambda: |-
+            float v = id(bl0906_temperature).state;
+            return std::isnan(v) ? std::string("--") : str_sprintf("%.1f°C", v);
+        - type: value
+          text: "PCB"
+          value_lambda: |-
+            float v = id(cpu_board_temp).state;
+            return std::isnan(v) ? std::string("--") : str_sprintf("%.1f°C", v);
+        - type: value
+          text: "VIN"
+          value_lambda: |-
+            float v = id(vin_meas).state;
+            return std::isnan(v) ? std::string("--") : str_sprintf("%.1f V", v);
+        - type: value
+          text: "PoE"
+          value_lambda: |-
+            float v = id(poe_voltage).state;
+            return std::isnan(v) ? std::string("--") : str_sprintf("%.1f V", v);
+        # Network info items are added via network-specific packages:
+        # jxd-r6-eth-menu-items.yaml or jxd-r6-wifi-menu-items.yaml
+
+    - type: menu
+      text: "Settings"
+      id: menu_settings_id
+      items:
+        - type: menu
+          text: "Display"
+          items:
+            - type: select
+              text: "Turn off"
+              select: display_off_timer_select
+
+        - type: menu
+          text: "Factory reset"
+          items:
+            - type: label
+              text: "Factory reset?"
+
+            - type: command
+              text: "Yes"
+              on_value:
+                - lambda: |-
+                    global_preferences->reset();
+                    App.safe_reboot();
+
+        - type: command
+          text: "Reboot device"
+          on_value:
+            - lambda: App.safe_reboot();

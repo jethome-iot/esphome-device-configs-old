@@ -1,0 +1,7 @@
+# One energy counter row. Include with vars: {label: "Today", wh: "id(energy_today_wh)"}.
+# Precision drops as the value grows so a long label still fits the row.
+type: value
+text: "${label}"
+value_lambda: |-
+  const double kwh = ${wh} / 1000.0;
+  return str_sprintf("%.*fkWh", kwh < 100 ? 2 : (kwh < 1000 ? 1 : 0), kwh);

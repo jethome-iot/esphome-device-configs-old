@@ -1,0 +1,34 @@
+# Menu of one BL0906 channel: readings and its user energy counter. Include with vars: {channel: "1", index: "0"}.
+type: menu
+text: "Channel ${channel}"
+items:
+  - type: value
+    text: "I"
+    value_lambda: |-
+      float v = id(current_${channel}).state;
+      return std::isnan(v) ? std::string("--") : str_sprintf("%.2f A", v);
+  - type: value
+    text: "P"
+    value_lambda: |-
+      float v = id(power_${channel}).state;
+      return std::isnan(v) ? std::string("--") : str_sprintf("%.1f W", v);
+  - type: value
+    text: "E"
+    value_lambda: |-
+      const double kwh = id(energy_channel_wh)[${index}] / 1000.0;
+      return str_sprintf("%.*fkWh", kwh < 100 ? 2 : (kwh < 1000 ? 1 : 0), kwh);
+  - type: value
+    text: "Since"
+    value_lambda: |-
+      const uint32_t since = id(energy_channel_time)[${index}];
+      return since == 0 ? std::string("--") : ESPTime::from_epoch_local(since).strftime("%d.%m.%Y");
+  - type: menu
+    text: "Reset"
+    items:
+      - type: label
+        text: "Reset channel ${channel}?"
+      - type: command
+        text: "Yes"
+        on_value:
+          - button.press: reset_energy_channel_${channel}
+          - display_menu.back:

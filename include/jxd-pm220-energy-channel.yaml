@@ -1,0 +1,44 @@
+# User energy counter of one BL0906 channel. Include with vars: {channel: "1", index: "0"}.
+sensor:
+  - platform: template
+    name: "Energy Channel ${channel}"
+    id: energy_channel_${channel}
+    lambda: |-
+      if (!id(energy_loaded))
+        return {};
+      return id(energy_channel_wh)[${index}] / 1000.0;
+    unit_of_measurement: kWh
+    device_class: energy
+    state_class: total_increasing
+    accuracy_decimals: 3
+    update_interval: 30s
+
+text_sensor:
+  # A float sensor would round the epoch to minutes, so send ISO 8601 instead
+  - platform: template
+    name: "Energy Channel ${channel} Reset Time"
+    id: energy_channel_${channel}_reset_time
+    device_class: timestamp
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      const uint32_t since = id(energy_channel_time)[${index}];
+      if (!id(energy_loaded) || since == 0)
+        return {};
+      return ESPTime::from_epoch_utc(since).strftime("%Y-%m-%dT%H:%M:%S+00:00");
+
+button:
+  - platform: template
+    name: "Reset Energy Channel ${channel}"
+    id: reset_energy_channel_${channel}
+    icon: mdi:counter
+    on_press:
+      - lambda: |-
+          if (!id(energy_loaded))
+            return;
+          id(energy_channel_wh)[${index}] = 0;
+          auto now = id(pcf8563_time).now();
+          id(energy_channel_time)[${index}] = now.is_valid() ? now.timestamp : 0;
+      - script.execute: energy_save
+      - component.update: energy_channel_${channel}
+      - component.update: energy_channel_${channel}_reset_time

@@ -7,7 +7,12 @@ substitutions:
 
 packages:
   main: !include ../include/jxd-pm220-e1eth-base.yaml
+  energy: !include ../include/jxd-pm220-energy.yaml
   wifi: !include ../include/wifi.yaml
+  display: !include ../include/jxd-pm220-e1eth-display.yaml
+  # Not yet: jxd-r6-wifi-menu-items.yaml uses IPAddress::str(), removed in ESPHome 2026.8
+  # wifi_menu: !include ../include/jxd-r6-wifi-menu-items.yaml
+  buttons: !include ../include/jxd-r6-e1eth-buttons.yaml
 
 esphome:
   name: ${name}
@@ -23,6 +28,12 @@ esphome:
       - delay: 200ms
       - script.execute: setup_time
 
+external_components:
+  - source:
+      type: local
+      path: ../components
+    components: [display_menu_base, graphical_display_menu]
+
 http_request:
 
 ota:
@@ -32,4 +43,3 @@ ota:
 dashboard_import:
   package_import_url: github://jethome-iot/esphome-configs/JXD/jxd-pm220-e1eth-wifi.yaml@master
   import_full_config: true
-

@@ -1,0 +1,58 @@
+# Readings page, opened with LEFT: channels 1-3 on the left, 4-6 on the right.
+display:
+  - platform: ssd1306_i2c
+    id: !extend ${display_settings_id}
+    pages:
+      - id: status_page
+        lambda: |-
+          const int col_number[2] = {0, 66};
+          const int col_current[2] = {31, 97};
+          const int col_power[2] = {58, 127};
+          const int row_height = 9;
+
+          sensor::Sensor *current[6] = {id(current_1), id(current_2), id(current_3),
+                                        id(current_4), id(current_5), id(current_6)};
+          sensor::Sensor *power[6] = {id(power_1), id(power_2), id(power_3),
+                                      id(power_4), id(power_5), id(power_6)};
+
+          auto has_value = [](sensor::Sensor *s) { return s->has_state() && !std::isnan(s->state); };
+
+          for (int half = 0; half < 2; half++) {
+            it.print(col_current[half], 0, id(f5x7), TextAlign::TOP_RIGHT, "I,A");
+            it.print(col_power[half], 0, id(f5x7), TextAlign::TOP_RIGHT, "P,W");
+            for (int row = 0; row < 3; row++) {
+              const int ch = half * 3 + row;
+              const int y = (row + 1) * row_height;
+              it.printf(col_number[half], y, id(f5x7), "%d", ch + 1);
+              if (has_value(current[ch])) {
+                // Keep big currents inside the column
+                const float i = current[ch]->state;
+                it.printf(col_current[half], y, id(f5x7), TextAlign::TOP_RIGHT, "%.*f", i >= 100 ? 1 : 2, i);
+              } else {
+                it.print(col_current[half], y, id(f5x7), TextAlign::TOP_RIGHT, "--");
+              }
+              if (has_value(power[ch])) {
+                it.printf(col_power[half], y, id(f5x7), TextAlign::TOP_RIGHT, "%.0f", power[ch]->state);
+              } else {
+                it.print(col_power[half], y, id(f5x7), TextAlign::TOP_RIGHT, "--");
+              }
+            }
+          }
+
+          it.vertical_line(62, 0, 4 * row_height - 2);
+          it.horizontal_line(0, 4 * row_height, it.get_width());
+
+          // Mains, chip total over the channels and chip temperature
+          const int y1 = 4 * row_height + 4;
+          const int y2 = y1 + row_height + 2;
+          if (has_value(id(line_voltage)))
+            it.printf(0, y1, id(f5x7), "U %.1f V", id(line_voltage).state);
+          if (has_value(id(line_frequency)))
+            it.printf(127, y1, id(f5x7), TextAlign::TOP_RIGHT, "%.2f Hz", id(line_frequency).state);
+          if (has_value(id(total_power))) {
+            it.printf(0, y2, id(f5x7), "Sum %.0f W", id(total_power).state);
+          } else {
+            it.print(0, y2, id(f5x7), "Sum --");
+          }
+          if (has_value(id(bl0906_temperature)))
+            it.printf(127, y2, id(f5x7), TextAlign::TOP_RIGHT, "Chip %.0f°C", id(bl0906_temperature).state);

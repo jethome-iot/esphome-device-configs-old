@@ -1,0 +1,24 @@
+# Menu of one user energy counter. Include with vars: {slot: "1", index: "0"}.
+type: menu
+text: "Counter ${slot}"
+items:
+  - type: value
+    text: "Energy"
+    value_lambda: |-
+      const double kwh = id(energy_slot_wh)[${index}] / 1000.0;
+      return str_sprintf("%.*fkWh", kwh < 100 ? 2 : (kwh < 1000 ? 1 : 0), kwh);
+  - type: value
+    text: "Since"
+    value_lambda: |-
+      const uint32_t since = id(energy_slot_time)[${index}];
+      return since == 0 ? std::string("--") : ESPTime::from_epoch_local(since).strftime("%d.%m.%Y");
+  - type: menu
+    text: "Reset"
+    items:
+      - type: label
+        text: "Reset counter ${slot}?"
+      - type: command
+        text: "Yes"
+        on_value:
+          - button.press: reset_energy_counter_${slot}
+          - display_menu.back:

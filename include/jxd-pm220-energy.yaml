@@ -1,0 +1,252 @@
+# Consumed energy counters on top of the BL0906 channel energy (sum of the six channels).
+# The chip counters are not cleared on read and restart only with the chip itself (power loss
+# or GPIO32), so they keep running across ESP reboots. The counters add what came in since the
+# last reading, and the totals and those readings are kept in the CPU board FRAM (fram_cpu),
+# written every 10 s.
+# Needs jxd-pm220-e1eth-base.yaml (BL0906, fram_cpu and the pcf8563_time time source).
+
+esphome:
+  includes:
+    - ../include/jxd-pm380-energy-store.h
+    - ../include/jxd-pm220-channel-store.h
+
+packages:
+  # User counters, each with its own reset button
+  slot1: !include {file: jxd-pm220-energy-slot.yaml, vars: {slot: "1", index: "0"}}
+  slot2: !include {file: jxd-pm220-energy-slot.yaml, vars: {slot: "2", index: "1"}}
+  slot3: !include {file: jxd-pm220-energy-slot.yaml, vars: {slot: "3", index: "2"}}
+  # One user counter per channel, each with its own reset button
+  channel1: !include {file: jxd-pm220-energy-channel.yaml, vars: {channel: "1", index: "0"}}
+  channel2: !include {file: jxd-pm220-energy-channel.yaml, vars: {channel: "2", index: "1"}}
+  channel3: !include {file: jxd-pm220-energy-channel.yaml, vars: {channel: "3", index: "2"}}
+  channel4: !include {file: jxd-pm220-energy-channel.yaml, vars: {channel: "4", index: "3"}}
+  channel5: !include {file: jxd-pm220-energy-channel.yaml, vars: {channel: "5", index: "4"}}
+  channel6: !include {file: jxd-pm220-energy-channel.yaml, vars: {channel: "6", index: "5"}}
+
+i2c_eeprom:
+  # Load the counters as soon as the FRAM is up, before anything is published
+  - id: !extend fram_cpu
+    on_setup:
+      - script.execute: energy_load
+
+sensor:
+  # Nothing goes out before the counters are loaded: a zero would look like a reset to HA
+  - platform: template
+    name: "Energy Today"
+    id: energy_today
+    lambda: |-
+      if (!id(energy_loaded))
+        return {};
+      return id(energy_today_wh) / 1000.0;
+    unit_of_measurement: kWh
+    device_class: energy
+    state_class: total_increasing
+    accuracy_decimals: 3
+    update_interval: 30s
+  - platform: template
+    name: "Energy Yesterday"
+    id: energy_yesterday
+    lambda: |-
+      if (!id(energy_loaded))
+        return {};
+      return id(energy_yesterday_wh) / 1000.0;
+    unit_of_measurement: kWh
+    device_class: energy
+    accuracy_decimals: 3
+    update_interval: 30s
+  - platform: template
+    name: "Energy This Month"
+    id: energy_this_month
+    lambda: |-
+      if (!id(energy_loaded))
+        return {};
+      return id(energy_month_wh) / 1000.0;
+    unit_of_measurement: kWh
+    device_class: energy
+    state_class: total_increasing
+    accuracy_decimals: 3
+    update_interval: 30s
+  - platform: template
+    name: "Energy Last Month"
+    id: energy_last_month
+    lambda: |-
+      if (!id(energy_loaded))
+        return {};
+      return id(energy_last_month_wh) / 1000.0;
+    unit_of_measurement: kWh
+    device_class: energy
+    accuracy_decimals: 3
+    update_interval: 30s
+
+globals:
+  # Live counters; FRAM holds the copy that survives a reboot
+  - id: energy_slot_wh
+    type: std::array<double, 3>
+  - id: energy_slot_time
+    type: std::array<uint32_t, 3>
+  - id: energy_today_wh
+    type: double
+  - id: energy_yesterday_wh
+    type: double
+  - id: energy_day_key
+    type: uint32_t
+  - id: energy_month_wh
+    type: double
+  - id: energy_last_month_wh
+    type: double
+  - id: energy_month_key
+    type: uint32_t
+  - id: energy_channel_wh
+    type: std::array<double, 6>
+  - id: energy_channel_time
+    type: std::array<uint32_t, 6>
+  # Chip channel readings at the last pass, NAN while unknown
+  - id: energy_chip_kwh
+    type: std::array<float, 6>
+    initial_value: "{NAN, NAN, NAN, NAN, NAN, NAN}"
+  - id: energy_loaded
+    type: bool
+    initial_value: "false"
+
+# EnergyStore and ChannelEnergyStore are only the FRAM images: ESPHome adds includes after
+# the globals, so the header types cannot be globals themselves
+script:
+  - id: energy_load
+    then:
+      - lambda: |-
+          EnergyStore stored;
+          ChannelEnergyStore channels;
+          if (!id(fram_cpu)->get(ENERGY_STORE_ADDRESS, reinterpret_cast<uint8_t *>(&stored), sizeof(stored)) ||
+              !id(fram_cpu)->get(CHANNEL_STORE_ADDRESS, reinterpret_cast<uint8_t *>(&channels), sizeof(channels))) {
+            // Keep the FRAM untouched and try again on the next pass
+            ESP_LOGW("energy", "Reading the counters from FRAM failed");
+            return;
+          }
+          if (stored.magic == ENERGY_STORE_MAGIC && stored.version == ENERGY_STORE_VERSION &&
+              stored.crc == energy_store_crc(stored)) {
+            id(energy_slot_wh) = stored.slot_wh;
+            id(energy_slot_time) = stored.slot_time;
+            id(energy_today_wh) = stored.today_wh;
+            id(energy_yesterday_wh) = stored.yesterday_wh;
+            id(energy_day_key) = stored.day_key;
+            id(energy_month_wh) = stored.month_wh;
+            id(energy_last_month_wh) = stored.last_month_wh;
+            id(energy_month_key) = stored.month_key;
+            ESP_LOGI("energy", "Counters loaded from FRAM");
+          } else {
+            ESP_LOGW("energy", "No valid counters in FRAM, starting from zero");
+          }
+          // Without the chip readings the first reading after boot only becomes the new starting point
+          if (channels.magic == CHANNEL_STORE_MAGIC && channels.version == CHANNEL_STORE_VERSION &&
+              channels.crc == channel_store_crc(channels)) {
+            id(energy_channel_wh) = channels.channel_wh;
+            id(energy_channel_time) = channels.channel_time;
+            id(energy_chip_kwh) = channels.chip_kwh;
+          } else {
+            ESP_LOGW("energy", "No valid channel counters in FRAM, starting from zero");
+          }
+          id(energy_loaded) = true;
+
+  - id: energy_save
+    then:
+      - lambda: |-
+          if (!id(energy_loaded))
+            return;
+          // Channels with the chip readings first: a power cut between the two writes then
+          // loses a pass of the totals instead of counting it twice
+          ChannelEnergyStore channels{};
+          channels.channel_wh = id(energy_channel_wh);
+          channels.chip_kwh = id(energy_chip_kwh);
+          channels.channel_time = id(energy_channel_time);
+          channels.magic = CHANNEL_STORE_MAGIC;
+          channels.version = CHANNEL_STORE_VERSION;
+          channels.crc = channel_store_crc(channels);
+          if (!id(fram_cpu)->put(CHANNEL_STORE_ADDRESS, reinterpret_cast<const uint8_t *>(&channels), sizeof(channels)))
+            ESP_LOGW("energy", "Writing the channel counters to FRAM failed");
+
+          EnergyStore store{};
+          store.slot_wh = id(energy_slot_wh);
+          store.slot_time = id(energy_slot_time);
+          store.today_wh = id(energy_today_wh);
+          store.yesterday_wh = id(energy_yesterday_wh);
+          store.day_key = id(energy_day_key);
+          store.month_wh = id(energy_month_wh);
+          store.last_month_wh = id(energy_last_month_wh);
+          store.month_key = id(energy_month_key);
+          store.magic = ENERGY_STORE_MAGIC;
+          store.version = ENERGY_STORE_VERSION;
+          store.crc = energy_store_crc(store);
+          if (!id(fram_cpu)->put(ENERGY_STORE_ADDRESS, reinterpret_cast<const uint8_t *>(&store), sizeof(store)))
+            ESP_LOGW("energy", "Writing the counters to FRAM failed");
+
+interval:
+  - interval: 10s
+    then:
+      - lambda: |-
+          if (!id(energy_loaded)) {
+            id(energy_load).execute();
+            if (!id(energy_loaded))
+              return;
+          }
+
+          auto now = id(pcf8563_time).now();
+          if (now.is_valid()) {
+            const uint32_t day_key = now.year * 1000 + now.day_of_year;
+            if (id(energy_day_key) != day_key) {
+              auto prev = ESPTime::from_epoch_local(now.timestamp - 86400);
+              const uint32_t prev_day_key = prev.year * 1000 + prev.day_of_year;
+              // Yesterday is only known when the stored day really was yesterday
+              id(energy_yesterday_wh) = id(energy_day_key) == prev_day_key ? id(energy_today_wh) : 0;
+              id(energy_today_wh) = 0;
+              id(energy_day_key) = day_key;
+            }
+
+            const uint32_t month_key = now.year * 12 + now.month - 1;
+            if (id(energy_month_key) != month_key) {
+              id(energy_last_month_wh) = id(energy_month_key) == month_key - 1 ? id(energy_month_wh) : 0;
+              id(energy_month_wh) = 0;
+              id(energy_month_key) = month_key;
+            }
+
+            // First start: user counters count from now
+            for (auto &time : id(energy_slot_time)) {
+              if (time == 0)
+                time = now.timestamp;
+            }
+            for (auto &time : id(energy_channel_time)) {
+              if (time == 0)
+                time = now.timestamp;
+            }
+          }
+
+          // Add what the chip counted since the last reading; a smaller reading means
+          // the chip restarted (or its 24-bit counter wrapped) and counts from zero
+          sensor::Sensor *channel[6] = {id(energy_1), id(energy_2), id(energy_3),
+                                        id(energy_4), id(energy_5), id(energy_6)};
+          auto &last_kwh = id(energy_chip_kwh);
+          double delta_kwh = 0;
+          for (int i = 0; i < 6; i++) {
+            const float kwh = channel[i]->state;
+            if (std::isnan(kwh))
+              continue;
+            if (!std::isnan(last_kwh[i])) {
+              const float step = kwh >= last_kwh[i] ? kwh - last_kwh[i] : kwh;
+              // 1 kWh on one channel within a pass is far beyond any real load: a corrupted
+              // read or a long ESP outage. Skipping costs one pass, a bad read could cost
+              // the whole chip counter.
+              if (step <= 1.0f) {
+                delta_kwh += step;
+                id(energy_channel_wh)[i] += step * 1000.0;
+              } else {
+                ESP_LOGW("energy", "Channel %d jumped by %.3f kWh, not counted", i + 1, step);
+              }
+            }
+            last_kwh[i] = kwh;
+          }
+          const double delta = delta_kwh * 1000;
+
+          for (auto &slot : id(energy_slot_wh))
+            slot += delta;
+          id(energy_today_wh) += delta;
+          id(energy_month_wh) += delta;
+      - script.execute: energy_save

@@ -1,0 +1,30 @@
+# Per-channel power and user energy counters, opened with DOWN.
+# Counters come from jxd-pm220-energy.yaml, readings from the BL0906 in the base config.
+display:
+  - platform: ssd1306_i2c
+    id: !extend ${display_settings_id}
+    pages:
+      - id: channels_page
+        lambda: |-
+          sensor::Sensor *power[6] = {id(power_1), id(power_2), id(power_3),
+                                      id(power_4), id(power_5), id(power_6)};
+          const int col_power = 64;
+          const int col_energy = 127;
+          const int row_height = 9;
+
+          it.print(0, 0, id(f5x7), "Ch");
+          it.print(col_power, 0, id(f5x7), TextAlign::TOP_RIGHT, "P,W");
+          it.print(col_energy, 0, id(f5x7), TextAlign::TOP_RIGHT, "kWh");
+
+          for (int i = 0; i < 6; i++) {
+            const int y = (i + 1) * row_height;
+            it.printf(0, y, id(f5x7), "%d", i + 1);
+            if (std::isnan(power[i]->state)) {
+              it.print(col_power, y, id(f5x7), TextAlign::TOP_RIGHT, "--");
+            } else {
+              it.printf(col_power, y, id(f5x7), TextAlign::TOP_RIGHT, "%.1f", power[i]->state);
+            }
+            // Precision drops as the value grows so it stays inside its column
+            const double kwh = id(energy_channel_wh)[i] / 1000.0;
+            it.printf(col_energy, y, id(f5x7), TextAlign::TOP_RIGHT, "%.*f", kwh < 100 ? 3 : (kwh < 10000 ? 1 : 0), kwh);
+          }

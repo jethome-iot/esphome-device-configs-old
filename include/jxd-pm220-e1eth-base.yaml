@@ -23,7 +23,7 @@ preferences:
 
 esp32:
   board: esp32dev
-  flash_size: 8MB
+  flash_size: 16MB
   framework:
     type: esp-idf
     sdkconfig_options:
@@ -33,7 +33,7 @@ esp32:
 
 psram:
   mode: quad
-  speed: 40MHz
+  speed: 80MHz
 
 # Enable logging
 logger:
@@ -77,67 +77,95 @@ i2c_eeprom:
     size: 64KB # size in Kbits
     address: 0x52
 
+# BL0906 behind the SCM3725ASA isolator. Its RESET follows GPIO32 through an optocoupler
+# (high holds the chip in reset), so GPIO32 is left alone.
 uart:
   tx_pin: GPIO33
   rx_pin: GPIO34
   baud_rate: 19200
 
 sensor:
+  # Channel energy is the chip pulse counter in kWh: not cleared on read, it restarts only
+  # with the chip itself, not with the ESP
   - platform: bl0906
+    # The 60 s default is too slow for the screen
+    update_interval: 5s
     frequency:
       name: 'Frequency'
+      id: line_frequency
     temperature:
       name: 'Temperature'
+      id: bl0906_temperature
     voltage:
       name: 'Voltage'
+      id: line_voltage
       filters:
         - lambda: return x * 0.8;
     channel_1:
       current:
         name: 'Current_1'
+        id: current_1
       power:
         name: 'Power_1'
+        id: power_1
       energy:
         name: 'Energy_1'
+        id: energy_1
     channel_2:
       current:
         name: 'Current_2'
+        id: current_2
       power:
         name: 'Power_2'
+        id: power_2
       energy:
         name: 'Energy_2'
+        id: energy_2
     channel_3:
       current:
         name: 'Current_3'
+        id: current_3
       power:
         name: 'Power_3'
+        id: power_3
       energy:
         name: 'Energy_3'
+        id: energy_3
     channel_4:
       current:
         name: 'Current_4'
+        id: current_4
       power:
         name: 'Power_4'
+        id: power_4
       energy:
         name: 'Energy_4'
+        id: energy_4
     channel_5:
       current:
         name: 'Current_5'
+        id: current_5
       power:
         name: 'Power_5'
+        id: power_5
       energy:
         name: 'Energy_5'
+        id: energy_5
     channel_6:
       current:
         name: 'Current_6'
+        id: current_6
       power:
         name: 'Power_6'
+        id: power_6
       energy:
         name: 'Energy_6'
+        id: energy_6
     total_energy:
       name: 'Total_Energy'
     total_power:
       name: 'Total_Power'
+      id: total_power
 
 # temperature sensor
   - platform: tmp102
