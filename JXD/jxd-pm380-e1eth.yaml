@@ -1,7 +1,7 @@
 substitutions:
   friendly_name: JXD-PM380-E1ETH
-  lowercase_name: jxd-pm380-e1eth-test
-  device_description: JXD-PM380-E1ETH v1.0 with JXD-CPU-E1ETH Rev 2.0
+  lowercase_name: jxd-pm380-e1eth
+  device_description: JXD-PM380-E1ETH v1.0
   version: 1.0.0
   timezone: GMT
 
@@ -13,7 +13,6 @@ packages:
   jxd-pm380-e1eth-display: !include ../include/jxd-pm380-e1eth-display.yaml
   network_menu: !include ../include/network-menu-items.yaml
   jxd-r6-e1eth-buttons: !include ../include/jxd-r6-e1eth-buttons.yaml
-  full-test: !include ../tests/full-test.yaml
 
 esphome:
   name: ${lowercase_name}
@@ -87,7 +86,7 @@ external_components:
   #   components: [wifi, ethernet]
 
 dashboard_import:
-  package_import_url: github://jethome-iot/esphome-configs/JXD/jxd-pm380-e1eth-eth.yaml@master
+  package_import_url: github://jethome-iot/esphome-configs/JXD/jxd-pm380-e1eth.yaml@master
   import_full_config: true
 
 time:
@@ -201,15 +200,14 @@ sensor:
       sorting_weight: 1
 
 binary_sensor:
-  # - platform: gpio
-  #   pin:
-  #     number: GPIO0
-  #     inverted: true
-  #   name: "FN button"
-  #   id: fn_button
-  #   web_server:
-  #     sorting_group_id: device
-  #     sorting_weight: 1
+  - platform: gpio
+    pin:
+      number: GPIO0
+      inverted: true
+    name: "FN button"
+    id: fn_button
+    # The firmware's button, not an entity for HA
+    internal: true
 
 switch:
   - platform: gpio

@@ -1,24 +1,45 @@
 substitutions:
-  friendly_name: JXD-PM380-E1ETH v1.0
+  friendly_name: JXD-PM380-E1ETH
   lowercase_name: jxd-pm380-e1eth-test
-  device_description: JXD-PM380-E1ETH v1.0
+  device_description: JXD-PM380-E1ETH v1.0 with JXD-CPU-E1ETH Rev 2.0
+  version: 1.0.0
+  timezone: GMT
 
 packages:
   jxd-d3-pm3-3: !include ../include/jxd-d3-pm3-3.yaml
   energy: !include ../include/jxd-pm380-energy.yaml
+  # Ethernet and WiFi, switched at run time by the Network mode select
+  network: !include ../include/network.yaml
+  jxd-pm380-e1eth-display: !include ../include/jxd-pm380-e1eth-display.yaml
+  network_menu: !include ../include/network-menu-items.yaml
+  jxd-r6-e1eth-buttons: !include ../include/jxd-r6-e1eth-buttons.yaml
+  full-test: !include ../tests/full-test.yaml
 
 esphome:
   name: ${lowercase_name}
-  # name_add_mac_suffix: true
+  name_add_mac_suffix: true
   friendly_name: ${friendly_name}
+  project:
+    name: JetHub.JXD PM380-E1ETH
+    version: ${version}
+  # A list, so it joins the on_boot of network.yaml rather than replacing it
+  on_boot:
+    - priority: 600
+      then:
+        - switch.turn_on: red_led
+        - delay: 300ms
+        - switch.turn_off: red_led
 
 # Enable logging
 logger:
-  level: DEBUG
+  level: VERBOSE
+  initial_level: DEBUG
   logs:
     text_sensor: NONE
     sensor: NONE
     adc.common: WARN
+    pca9554: WARN
+    atm90e32: VERBOSE
 
 # Enable Home Assistant API
 api:
@@ -37,30 +58,6 @@ web_server:
       name: "Device controls"
       sorting_weight: 10
 
-wifi:
-  ssid: TVIP-2
-  password: tvip2014
-
-# ethernet:
-#   type: LAN8720
-#   mdc_pin: GPIO23
-#   mdio_pin: GPIO18
-#   clk_mode: GPIO17_OUT
-#   phy_addr: 1
-
-# esp32:
-#   board: esp32dev
-#   flash_size: 8MB
-#   framework:
-#     type: esp-idf
-#     sdkconfig_options:
-#       CONFIG_COMPILER_OPTIMIZATION_SPEED: y
-#       CONFIG_D0WD_PSRAM_CLK_IO: "6"
-#       CONFIG_D0WD_PSRAM_CS_IO: "16"
-#       CONFIG_ESP_MAC_USE_CUSTOM_MAC_AS_BASE_MAC: y
-#     version: 5.1.2
-#     # version: recommended
-#     platform_version: https://github.com/platformio/platform-espressif32
 esp32:
   board: esp32dev
   flash_size: 16MB
@@ -79,11 +76,19 @@ psram:
 external_components:
   - source: github://pilotak/esphome-eeprom
     components: [i2c_eeprom]
+  - source:
+      type: local
+      path: ../components
+    components: [display_menu_base, graphical_display_menu]
   # - source:
   #     type: git
   #     url: https://github.com/jethome-iot/esphome
   #     ref: dev-jethub
   #   components: [wifi, ethernet]
+
+dashboard_import:
+  package_import_url: github://jethome-iot/esphome-configs/JXD/jxd-pm380-e1eth.yaml@master
+  import_full_config: true
 
 time:
 # компонент для RTC PCF8563
@@ -196,14 +201,15 @@ sensor:
       sorting_weight: 1
 
 binary_sensor:
-  - platform: gpio
-    pin:
-      number: GPIO0
-      inverted: true
-    name: "FN button"
-    id: fn_button
-    # The firmware's button, not an entity for HA
-    internal: true
+  # - platform: gpio
+  #   pin:
+  #     number: GPIO0
+  #     inverted: true
+  #   name: "FN button"
+  #   id: fn_button
+  #   web_server:
+  #     sorting_group_id: device
+  #     sorting_weight: 1
 
 switch:
   - platform: gpio
