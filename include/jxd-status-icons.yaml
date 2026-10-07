@@ -1,6 +1,6 @@
 # Main page status icons, 16x16 each: the network link and Home Assistant.
 # The art comes from scripts/build-icons.py. The link icon's expression, `link_icon`,
-# is set by ethernet.yaml or wifi.yaml, whichever the device config uses.
+# is set by network.yaml, ethernet.yaml or wifi.yaml, whichever the device config uses.
 
 substitutions:
   # Home Assistant subscribes to states; a bare API client such as `esphome logs` does not count.

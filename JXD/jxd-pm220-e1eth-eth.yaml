@@ -8,9 +8,10 @@ substitutions:
 packages:
   main: !include ../include/jxd-pm220-e1eth-base.yaml
   energy: !include ../include/jxd-pm220-energy.yaml
-  ethernet: !include ../include/ethernet.yaml
+  # Ethernet and WiFi, switched at run time by the Network mode select
+  network: !include ../include/network.yaml
   display: !include ../include/jxd-pm220-e1eth-display.yaml
-  eth_menu: !include ../include/jxd-r6-eth-menu-items.yaml
+  network_menu: !include ../include/network-menu-items.yaml
   buttons: !include ../include/jxd-r6-e1eth-buttons.yaml
 
 esphome:
@@ -20,11 +21,12 @@ esphome:
   project:
     name: JetHub.JXD PM220-E1ETH
     version: ${version}
+  # A list, so it joins the on_boot of network.yaml rather than replacing it
   on_boot:
-    priority: 600
-    then:
-      - delay: 200ms
-      - script.execute: setup_time
+    - priority: 600
+      then:
+        - delay: 200ms
+        - script.execute: setup_time
 
 external_components:
   - source:

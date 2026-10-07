@@ -1,7 +1,7 @@
 # Front panel assumed to be the PM380 one (JXD-DISPLAY2 rev 1.0), not checked on PM220.
 # Needs jxd-r6-e1eth-buttons.yaml (joystick), jxd-pm220-e1eth-base.yaml (readings),
-# jxd-pm220-energy.yaml (counters) and ethernet.yaml or wifi.yaml (link icon)
-# in the device config.
+# jxd-pm220-energy.yaml (counters) and network.yaml, ethernet.yaml or wifi.yaml (link icon,
+# `ip`) in the device config.
 # On the main page LEFT opens the status page, UP the energy counters, DOWN the channels,
 # RIGHT the clock, CENTER the menu.
 
@@ -158,8 +158,8 @@ graphical_display_menu:
           value_lambda: |-
             float v = id(poe_voltage).state;
             return std::isnan(v) ? std::string("--") : str_sprintf("%.1f V", v);
-        # Network info items are added via network-specific packages:
-        # jxd-r6-eth-menu-items.yaml or jxd-r6-wifi-menu-items.yaml
+        # Network rows are added by network-menu-items.yaml (with network.yaml), or
+        # jxd-r6-eth-menu-items.yaml / jxd-r6-wifi-menu-items.yaml
 
     - type: menu
       text: "Settings"
@@ -172,8 +172,10 @@ graphical_display_menu:
               text: "Turn off"
               select: display_off_timer_select
 
+        # Weighted to stay last: network-menu-items.yaml adds its rows above them.
         - type: menu
           text: "Factory reset"
+          weight: 40
           items:
             - type: label
               text: "Factory reset?"
@@ -188,5 +190,6 @@ graphical_display_menu:
 
         - type: command
           text: "Reboot device"
+          weight: 50
           on_value:
             - lambda: App.safe_reboot();

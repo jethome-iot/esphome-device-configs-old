@@ -2,6 +2,7 @@
 
 #include "esphome/core/defines.h"
 #include "esphome/core/automation.h"
+#include "esphome/core/optional.h"
 
 #ifdef USE_NUMBER
 #include "esphome/components/number/number.h"
@@ -56,6 +57,12 @@ class MenuItem {
 
   virtual bool select_next() { return false; }
   virtual bool select_prev() { return false; }
+
+  /// JetHome: apply_on_confirm. The menu starts editing the item, before on_enter().
+  virtual void begin_edit() {}
+  /// JetHome: apply_on_confirm. The menu stops editing the item, before on_leave(): confirmed by
+  /// "enter", or abandoned by "back", hiding or resetting the menu.
+  virtual void end_edit(bool confirmed) {}
 
   void on_enter();
   void on_leave();
@@ -113,6 +120,9 @@ class MenuItemSelect : public MenuItemEditable {
  public:
   explicit MenuItemSelect() : MenuItemEditable(MENU_ITEM_SELECT) {}
   void set_select_variable(select::Select *var) { this->select_var_ = var; }
+  /// JetHome: apply_on_confirm. Stepping through the options while editing only moves a pending
+  /// choice; "enter" sets the select to it, anything else that ends the edit drops it.
+  void set_apply_on_confirm(bool val) { this->apply_on_confirm_ = val; }
 
   bool has_value() const override { return true; }
   std::string get_value_text() const override;
@@ -120,8 +130,14 @@ class MenuItemSelect : public MenuItemEditable {
   bool select_next() override;
   bool select_prev() override;
 
+  void begin_edit() override;
+  void end_edit(bool confirmed) override;
+
  protected:
   select::Select *select_var_{nullptr};
+  bool apply_on_confirm_{false};
+  /// The option being picked, while an apply_on_confirm edit is in progress.
+  optional<size_t> pending_index_{};
 };
 #endif
 

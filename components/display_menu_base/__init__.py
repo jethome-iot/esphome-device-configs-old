@@ -21,7 +21,8 @@ from esphome.const import (
     CONF_TEXT,
     CONF_TRIGGER_ID,
     CONF_TYPE,
-    CONF_VALUE
+    CONF_VALUE,
+    CONF_WEIGHT,  # JetHome: weight
 )
 
 CODEOWNERS = ["@numo68"]
@@ -40,6 +41,7 @@ CONF_ON_TEXT = "on_text"
 CONF_OFF_TEXT = "off_text"
 CONF_VALUE_LAMBDA = "value_lambda"
 CONF_IMMEDIATE_EDIT = "immediate_edit"
+CONF_APPLY_ON_CONFIRM = "apply_on_confirm"  # JetHome: apply_on_confirm
 CONF_ROOT_ITEM_ID = "root_item_id"
 CONF_ON_ENTER = "on_enter"
 CONF_ON_LEAVE = "on_leave"
@@ -138,9 +140,24 @@ def menu_item_schema(value):
     return MENU_ITEM_SCHEMA(value)
 
 
+# JetHome: weight. Stable, so items of equal weight keep their declaration order.
+def sort_by_weight(items):
+    return sorted(items, key=lambda item: item.get(CONF_WEIGHT, 0))
+
+
+# JetHome: apply_on_confirm. An immediate edit has no "enter" to confirm with.
+def validate_apply_on_confirm(config):
+    if config[CONF_APPLY_ON_CONFIRM] and config[CONF_IMMEDIATE_EDIT]:
+        raise cv.Invalid(
+            f"{CONF_APPLY_ON_CONFIRM} needs an edit to confirm; it cannot go with {CONF_IMMEDIATE_EDIT}"
+        )
+    return config
+
+
 MENU_ITEM_COMMON_SCHEMA = cv.Schema(
     {
         cv.Optional(CONF_TEXT): cv.templatable(cv.string),
+        cv.Optional(CONF_WEIGHT): cv.int_,  # JetHome: weight
     }
 )
 
@@ -202,18 +219,24 @@ MENU_ITEM_SCHEMA = cv.typed_schema(
         CONF_MENU: MENU_ITEM_ENTER_LEAVE_SCHEMA.extend(
             {
                 cv.GenerateID(CONF_ID): cv.declare_id(MenuItemMenu),
+                # JetHome: weight ordering
                 cv.Required(CONF_ITEMS): cv.All(
-                    cv.ensure_list(menu_item_schema), cv.Length(min=1)
+                    cv.ensure_list(menu_item_schema), cv.Length(min=1), sort_by_weight
                 ),
             }
         ),
-        CONF_SELECT: MENU_ITEM_ENTER_LEAVE_VALUE_SCHEMA.extend(
-            {
-                cv.GenerateID(CONF_ID): cv.declare_id(MenuItemSelect),
-                cv.Required(CONF_SELECT): cv.use_id(Select),
-                cv.Optional(CONF_IMMEDIATE_EDIT, default=False): cv.boolean,
-                cv.Optional(CONF_VALUE_LAMBDA): cv.returning_lambda,
-            }
+        CONF_SELECT: cv.All(
+            MENU_ITEM_ENTER_LEAVE_VALUE_SCHEMA.extend(
+                {
+                    cv.GenerateID(CONF_ID): cv.declare_id(MenuItemSelect),
+                    cv.Required(CONF_SELECT): cv.use_id(Select),
+                    cv.Optional(CONF_IMMEDIATE_EDIT, default=False): cv.boolean,
+                    # JetHome: apply_on_confirm
+                    cv.Optional(CONF_APPLY_ON_CONFIRM, default=False): cv.boolean,
+                    cv.Optional(CONF_VALUE_LAMBDA): cv.returning_lambda,
+                }
+            ),
+            validate_apply_on_confirm,
         ),
         CONF_NUMBER: MENU_ITEM_ENTER_LEAVE_VALUE_SCHEMA.extend(
             {
@@ -294,8 +317,9 @@ DISPLAY_MENU_BASE_SCHEMA = cv.Schema(
                 ),
             }
         ),
+        # JetHome: weight ordering
         cv.Required(CONF_ITEMS): cv.All(
-            cv.ensure_list(MENU_ITEM_SCHEMA), cv.Length(min=1)
+            cv.ensure_list(MENU_ITEM_SCHEMA), cv.Length(min=1), sort_by_weight
         ),
     }
 ).extend(cv.COMPONENT_SCHEMA)
@@ -406,6 +430,8 @@ async def menu_item_to_code(menu, config, parent):
     if config[CONF_TYPE] == CONF_SELECT:
         var = await cg.get_variable(config[CONF_SELECT])
         cg.add(item.set_select_variable(var))
+        if config[CONF_APPLY_ON_CONFIRM]:  # JetHome: apply_on_confirm
+            cg.add(item.set_apply_on_confirm(True))
     if config[CONF_TYPE] == CONF_NUMBER:
         var = await cg.get_variable(config[CONF_NUMBER])
         cg.add(item.set_number_variable(var))

@@ -1,0 +1,77 @@
+# Network rows for the PM display menus, with network.yaml in the device config: the
+# addresses under Info, the Network mode and the WiFi reset under Settings. Takes the
+# place of jxd-r6-eth-menu-items.yaml / jxd-r6-wifi-menu-items.yaml there.
+# Rows fit 18 characters of f7x14_mod2, hence a label row and a value row each.
+
+graphical_display_menu:
+  items:
+    - id: !extend info_submenu
+      items:
+        - type: label
+          text: "IP(Eth):"
+
+        - type: label
+          text: !lambda 'return " " + id(ip_eth).state;'
+
+        - type: label
+          text: "IP(WiFi):"
+
+        - type: label
+          text: !lambda |-
+            if (id(captive_portal_id).is_active()) {
+              char buf[esphome::network::IP_ADDRESS_BUFFER_SIZE];
+              return " " + std::string(id(wifi_id).wifi_soft_ap_ip().str_to(buf));
+            }
+            return " " + id(ip_wifi).state;
+
+        - type: label
+          text: "MAC(Eth):"
+
+        - type: label
+          text: !lambda 'return " " + id(mac_eth).state;'
+
+        - type: label
+          text: "MAC(WiFi):"
+
+        - type: label
+          text: !lambda 'return " " + id(mac_wifi).state;'
+
+        # The fallback AP's; its SSID is the device name on the main page.
+        - type: label
+          text: "AP password:"
+
+        - type: label
+          text: !lambda |-
+            uint8_t mac[6];
+            get_mac_address_raw(mac);
+            return " " + str_snprintf("%02x%02x%02x%02x", 8, mac[2], mac[3], mac[4], mac[5]);
+
+    # Weights: the display file's unweighted rows, Network, Reset WiFi creds (20), then the
+    # display file's Factory reset (40) and Reboot device (50).
+    - id: !extend menu_settings_id
+      items:
+        # LEFT/RIGHT only move the choice shown between > <; CENTER applies it, BACK drops it.
+        # Applying every step would run each mode on the way: passing WiFi takes Ethernet down.
+        - type: select
+          text: "Network"
+          select: network_mode
+          apply_on_confirm: true
+
+        # Erases the stored network, so it sits with the other destructive rows.
+        - type: menu
+          text: "Reset WiFi creds"
+          weight: 20
+          items:
+            - type: label
+              text: "Reset WiFi?"
+
+            - type: command
+              text: "Yes"
+              id: wifi_reset_yes
+              on_value:
+                - lambda: 'id(wifi_reset_yes)->set_text("Yes - OK");'
+                - delay: 1s
+                - script.execute: reset_wifi
+                # Nothing reboots the row back to its label.
+                - delay: 3s
+                - lambda: 'id(wifi_reset_yes)->set_text("Yes");'

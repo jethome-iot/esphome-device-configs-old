@@ -40,7 +40,10 @@ void MenuItem::on_value_() { this->on_value_callbacks_.call(); }
 std::string MenuItemSelect::get_value_text() const {
   std::string result;
 
-  if (this->value_getter_.has_value()) {
+  if (this->pending_index_.has_value()) {
+    // JetHome: apply_on_confirm, the option being picked rather than the one in force
+    result = this->select_var_->option_at(*this->pending_index_);
+  } else if (this->value_getter_.has_value()) {
     result = this->value_getter_.value()(this);
   } else {
     if (this->select_var_ != nullptr) {
@@ -55,7 +58,11 @@ std::string MenuItemSelect::get_value_text() const {
 bool MenuItemSelect::select_next() {
   bool changed = false;
 
-  if (this->select_var_ != nullptr) {
+  if (this->pending_index_.has_value()) {
+    // JetHome: apply_on_confirm; begin_edit() made sure there is an option
+    this->pending_index_ = (*this->pending_index_ + 1) % this->select_var_->size();
+    changed = true;
+  } else if (this->select_var_ != nullptr) {
     this->select_var_->make_call().select_next(true).perform();
     changed = true;
   }
@@ -66,12 +73,37 @@ bool MenuItemSelect::select_next() {
 bool MenuItemSelect::select_prev() {
   bool changed = false;
 
-  if (this->select_var_ != nullptr) {
+  if (this->pending_index_.has_value()) {
+    // JetHome: apply_on_confirm; begin_edit() made sure there is an option
+    const size_t size = this->select_var_->size();
+    this->pending_index_ = (*this->pending_index_ + size - 1) % size;
+    changed = true;
+  } else if (this->select_var_ != nullptr) {
     this->select_var_->make_call().select_previous(true).perform();
     changed = true;
   }
 
   return changed;
+}
+
+// JetHome: apply_on_confirm
+void MenuItemSelect::begin_edit() {
+  if (this->apply_on_confirm_ && this->select_var_ != nullptr && this->select_var_->size() > 0)
+    this->pending_index_ = this->select_var_->active_index().value_or(0);
+}
+
+// JetHome: apply_on_confirm
+void MenuItemSelect::end_edit(bool confirmed) {
+  if (!this->pending_index_.has_value())
+    return;
+
+  const size_t index = *this->pending_index_;
+  this->pending_index_.reset();
+
+  if (confirmed && this->select_var_->active_index() != index) {
+    this->select_var_->make_call().set_index(index).perform();
+    this->on_value_();
+  }
 }
 #endif  // USE_SELECT
 

@@ -63,7 +63,8 @@ class DisplayMenuComponent : public Component {
   bool cursor_down_();
   bool enter_menu_();
   bool leave_menu_();
-  void finish_editing_();
+  /// JetHome: apply_on_confirm. `confirmed` is true only for "enter"; see MenuItem::end_edit().
+  void finish_editing_(bool confirmed);
   virtual void draw_menu();
   virtual void draw_item(const MenuItem *item, uint8_t row, bool selected) = 0;
   virtual void update() {}

@@ -8,10 +8,10 @@ substitutions:
 packages:
   jxd-d3-pm3-3: !include ../include/jxd-d3-pm3-3.yaml
   energy: !include ../include/jxd-pm380-energy.yaml
-  ethernet: !include ../include/ethernet.yaml
-  # wifi: !include ../include/wifi.yaml
+  # Ethernet and WiFi, switched at run time by the Network mode select
+  network: !include ../include/network.yaml
   jxd-pm380-e1eth-display: !include ../include/jxd-pm380-e1eth-display.yaml
-  eth_menu: !include ../include/jxd-r6-eth-menu-items.yaml
+  network_menu: !include ../include/network-menu-items.yaml
   jxd-r6-e1eth-buttons: !include ../include/jxd-r6-e1eth-buttons.yaml
 
 esphome:
@@ -21,12 +21,13 @@ esphome:
   project:
     name: JetHub.JXD PM380-E1ETH
     version: ${version}
+  # A list, so it joins the on_boot of network.yaml rather than replacing it
   on_boot:
-    priority: 600
-    then:
-      - switch.turn_on: red_led
-      - delay: 300ms
-      - switch.turn_off: red_led
+    - priority: 600
+      then:
+        - switch.turn_on: red_led
+        - delay: 300ms
+        - switch.turn_off: red_led
 
 # Enable logging
 logger:

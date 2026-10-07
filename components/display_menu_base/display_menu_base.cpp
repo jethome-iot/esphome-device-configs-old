@@ -58,7 +58,7 @@ void DisplayMenuComponent::left() {
         switch (this->mode_) {
           case MENU_MODE_ROTARY:
             if (this->editing_) {
-              this->finish_editing_();
+              this->finish_editing_(false);
               changed = true;
             } else {
               changed = this->leave_menu_();
@@ -124,7 +124,7 @@ void DisplayMenuComponent::back() {
       case MENU_ITEM_NUMBER:
       case MENU_ITEM_CUSTOM:
         if (this->editing_) {
-          this->finish_editing_();
+          this->finish_editing_(false);
           changed = true;
         } else {
           changed = this->leave_menu_();
@@ -146,7 +146,7 @@ void DisplayMenuComponent::enter() {
     MenuItem *item = this->get_selected_item_();
 
     if (this->editing_) {
-      this->finish_editing_();
+      this->finish_editing_(true);
       changed = true;
     } else {
       switch (item->get_type()) {
@@ -162,6 +162,7 @@ void DisplayMenuComponent::enter() {
           if (item->get_immediate_edit()) {
             changed = item->select_next();
           } else {
+            item->begin_edit();  // JetHome: apply_on_confirm
             this->editing_ = true;
             item->on_enter();
             changed = true;
@@ -170,6 +171,7 @@ void DisplayMenuComponent::enter() {
         case MENU_ITEM_NUMBER:
           // A number cannot be immediate in the rotary mode
           if (!item->get_immediate_edit() || this->mode_ == MENU_MODE_ROTARY) {
+            item->begin_edit();  // JetHome: apply_on_confirm
             this->editing_ = true;
             item->on_enter();
             changed = true;
@@ -204,7 +206,7 @@ void DisplayMenuComponent::show_main() {
   this->on_before_show();
 
   if (this->active_ && this->editing_)
-    this->finish_editing_();
+    this->finish_editing_(false);
 
   if (this->displayed_item_ != this->root_item_) {
     this->displayed_item_->on_leave();
@@ -232,7 +234,7 @@ void DisplayMenuComponent::reset_menu() {
   this->process_initial_();
 
   if (this->active_ && this->editing_)
-    this->finish_editing_();
+    this->finish_editing_(false);
 
   if (this->displayed_item_ != this->root_item_) {
     this->displayed_item_->on_leave();
@@ -267,7 +269,7 @@ void DisplayMenuComponent::hide() {
     this->on_before_hide();
 
     if (this->editing_)
-      this->finish_editing_();
+      this->finish_editing_(false);
     this->active_ = false;
     this->update();
 
@@ -353,12 +355,13 @@ bool DisplayMenuComponent::leave_menu_() {
   return changed;
 }
 
-void DisplayMenuComponent::finish_editing_() {
+void DisplayMenuComponent::finish_editing_(bool confirmed) {
   switch (this->get_selected_item_()->get_type()) {
     case MENU_ITEM_SELECT:
     case MENU_ITEM_NUMBER:
     case MENU_ITEM_SWITCH:
     case MENU_ITEM_CUSTOM:
+      this->get_selected_item_()->end_edit(confirmed);  // JetHome: apply_on_confirm
       this->get_selected_item_()->on_leave();
       break;
     default:

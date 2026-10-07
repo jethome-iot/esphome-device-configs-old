@@ -1,7 +1,7 @@
 # JXD-DISPLAY2 rev 1.0
 # Needs jxd-r6-e1eth-buttons.yaml (joystick), jxd-d3-pm3-3.yaml (readings),
-# jxd-pm380-energy.yaml (counters) and ethernet.yaml or wifi.yaml (link icon)
-# in the device config.
+# jxd-pm380-energy.yaml (counters) and network.yaml, ethernet.yaml or wifi.yaml (link icon,
+# `ip`) in the device config.
 # On the main page LEFT opens the status page, UP the energy counters, RIGHT the clock, CENTER the menu.
 
 script:
@@ -156,8 +156,8 @@ graphical_display_menu:
           value_lambda: |-
             float v = id(poe_voltage).state;
             return std::isnan(v) ? std::string("--") : str_sprintf("%.1f V", v);
-        # Network info items are added via network-specific packages:
-        # - For Ethernet: include jxd-r6-eth-menu-items.yaml
+        # Network rows are added by network-menu-items.yaml (with network.yaml), or
+        # jxd-r6-eth-menu-items.yaml / jxd-r6-wifi-menu-items.yaml
 
     - type: menu
       text: "Settings"
@@ -235,8 +235,10 @@ graphical_display_menu:
                   on_value:
                     - button.press: clear_power_offset_calibration
 
+        # Weighted to stay last: network-menu-items.yaml adds its rows above them.
         - type: menu
           text: "Factory reset"
+          weight: 40
           items:
             - type: label
               text: "Factory reset?"
@@ -251,5 +253,6 @@ graphical_display_menu:
 
         - type: command
           text: "Reboot device"
+          weight: 50
           on_value:
             - lambda: App.safe_reboot();
