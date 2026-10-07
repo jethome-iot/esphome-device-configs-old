@@ -1,0 +1,44 @@
+# One user energy counter. Include with vars: {slot: "1", index: "0"}.
+sensor:
+  - platform: template
+    name: "Energy Counter ${slot}"
+    id: energy_counter_${slot}
+    lambda: |-
+      if (!id(energy_loaded))
+        return {};
+      return id(energy_slot_wh)[${index}] / 1000.0;
+    unit_of_measurement: kWh
+    device_class: energy
+    state_class: total_increasing
+    accuracy_decimals: 3
+    update_interval: 30s
+
+text_sensor:
+  # A float sensor would round the epoch to minutes, so send ISO 8601 instead
+  - platform: template
+    name: "Energy Counter ${slot} Reset Time"
+    id: energy_counter_${slot}_reset_time
+    device_class: timestamp
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      const uint32_t since = id(energy_slot_time)[${index}];
+      if (!id(energy_loaded) || since == 0)
+        return {};
+      return ESPTime::from_epoch_utc(since).strftime("%Y-%m-%dT%H:%M:%S+00:00");
+
+button:
+  - platform: template
+    name: "Reset Energy Counter ${slot}"
+    id: reset_energy_counter_${slot}
+    icon: mdi:counter
+    on_press:
+      - lambda: |-
+          if (!id(energy_loaded))
+            return;
+          id(energy_slot_wh)[${index}] = 0;
+          auto now = id(pcf8563_time).now();
+          id(energy_slot_time)[${index}] = now.is_valid() ? now.timestamp : 0;
+      - script.execute: energy_save
+      - component.update: energy_counter_${slot}
+      - component.update: energy_counter_${slot}_reset_time

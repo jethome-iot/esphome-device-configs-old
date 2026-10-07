@@ -1,0 +1,37 @@
+# Energy counters page, opened with UP. Counters come from jxd-pm380-energy.yaml.
+display:
+  - platform: ssd1306_i2c
+    id: !extend ${display_settings_id}
+    pages:
+      - id: energy_page
+        lambda: |-
+          // Precision drops as the value grows so it stays inside its column
+          auto print_kwh = [&](int x_right, int y, double wh) {
+            const double kwh = wh / 1000.0;
+            it.printf(x_right, y, id(f5x7), TextAlign::TOP_RIGHT, "%.*f", kwh < 100 ? 2 : (kwh < 10000 ? 1 : 0), kwh);
+          };
+
+          // User counters with the date of their last reset
+          for (int i = 0; i < 3; i++) {
+            const int y = 1 + i * 9;
+            const uint32_t since = id(energy_slot_time)[i];
+            if (since != 0) {
+              it.printf(0, y, id(f5x7), "#%d %s", i + 1, ESPTime::from_epoch_local(since).strftime("%d.%m.%y").c_str());
+            } else {
+              it.printf(0, y, id(f5x7), "#%d", i + 1);
+            }
+            print_kwh(127, y, id(energy_slot_wh)[i]);
+          }
+
+          it.horizontal_line(0, 28, it.get_width());
+
+          // Calendar periods
+          it.print(0, 31, id(f5x7), "kWh");
+          it.print(88, 31, id(f5x7), TextAlign::TOP_RIGHT, "This");
+          it.print(127, 31, id(f5x7), TextAlign::TOP_RIGHT, "Last");
+          it.print(0, 41, id(f5x7), "Day");
+          print_kwh(88, 41, id(energy_today_wh));
+          print_kwh(127, 41, id(energy_yesterday_wh));
+          it.print(0, 51, id(f5x7), "Month");
+          print_kwh(88, 51, id(energy_month_wh));
+          print_kwh(127, 51, id(energy_last_month_wh));

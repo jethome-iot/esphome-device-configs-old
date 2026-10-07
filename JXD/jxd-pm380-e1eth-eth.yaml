@@ -1,20 +1,22 @@
 substitutions:
-  friendly_name: JXD-PM380-E1ETH v1.0
-  lowercase_name: jxd-pm380-e1eth-test
+  friendly_name: JXD-PM380-E1ETH
+  lowercase_name: jxd-pm380-e1eth
   device_description: JXD-PM380-E1ETH v1.0
   version: 1.0.0
   timezone: GMT
 
 packages:
   jxd-d3-pm3-3: !include ../include/jxd-d3-pm3-3.yaml
+  energy: !include ../include/jxd-pm380-energy.yaml
   ethernet: !include ../include/ethernet.yaml
   # wifi: !include ../include/wifi.yaml
   jxd-pm380-e1eth-display: !include ../include/jxd-pm380-e1eth-display.yaml
+  eth_menu: !include ../include/jxd-r6-eth-menu-items.yaml
   jxd-r6-e1eth-buttons: !include ../include/jxd-r6-e1eth-buttons.yaml
 
 esphome:
   name: ${lowercase_name}
-  # name_add_mac_suffix: true
+  name_add_mac_suffix: true
   friendly_name: ${friendly_name}
   project:
     name: JetHub.JXD PM380-E1ETH
@@ -25,7 +27,7 @@ esphome:
       - switch.turn_on: red_led
       - delay: 300ms
       - switch.turn_off: red_led
-      
+
 # Enable logging
 logger:
   level: VERBOSE
@@ -73,7 +75,7 @@ external_components:
   - source: github://pilotak/esphome-eeprom
     components: [i2c_eeprom]
   - source:
-      type: local 
+      type: local
       path: ../components
     components: [display_menu_base, graphical_display_menu]
   # - source:
@@ -98,9 +100,9 @@ time:
     id: sntp_time
     timezone: Europe/Moscow
     servers:
-     - 0.pool.ntp.org
-     - 1.pool.ntp.org
-     - 2.pool.ntp.org
+      - 0.pool.ntp.org
+      - 1.pool.ntp.org
+      - 2.pool.ntp.org
 # синхронизация времени
     on_time_sync:
       then:
@@ -195,7 +197,6 @@ sensor:
     web_server:
       sorting_group_id: device
       sorting_weight: 1
-  
 
 binary_sensor:
   - platform: gpio
@@ -216,5 +217,3 @@ switch:
     web_server:
       sorting_group_id: device
       sorting_weight: 1
-
-  

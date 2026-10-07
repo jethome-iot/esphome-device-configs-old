@@ -1,0 +1,40 @@
+# Menu with all readings of one phase. Include with vars: {phase: "1"}.
+type: menu
+text: "Phase L${phase}"
+items:
+  - type: value
+    text: "U"
+    value_lambda: |-
+      float v = id(voltage_l${phase}).state;
+      return std::isnan(v) ? std::string("--") : str_sprintf("%.1f V", v);
+  - type: value
+    text: "I"
+    value_lambda: |-
+      float v = id(current_l${phase}).state;
+      return std::isnan(v) ? std::string("--") : str_sprintf("%.2f A", v);
+  - type: value
+    text: "P"
+    value_lambda: |-
+      float v = id(active_power_l${phase}).state;
+      return std::isnan(v) ? std::string("--") : str_sprintf("%.1f W", v);
+  - type: value
+    text: "Q"
+    value_lambda: |-
+      float v = id(reactive_power_l${phase}).state;
+      return std::isnan(v) ? std::string("--") : str_sprintf("%.1f var", v);
+  - type: value
+    text: "PF"
+    value_lambda: |-
+      float v = id(power_factor_l${phase}).state;
+      return std::isnan(v) ? std::string("--") : str_sprintf("%.2f", v);
+  - type: value
+    text: "Angle"
+    value_lambda: |-
+      float v = id(phase_angle_l${phase}).state;
+      return std::isnan(v) ? std::string("--") : str_sprintf("%.1f°", v);
+  # ATM90E32 phase status: "Okay" or a list of over voltage / voltage sag / phase loss
+  - type: value
+    text: "Status"
+    value_lambda: |-
+      const auto &s = id(phase_status_l${phase}).state;
+      return s.empty() ? std::string("--") : (s == "Okay" ? std::string("OK") : s);

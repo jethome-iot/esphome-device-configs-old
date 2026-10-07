@@ -5,7 +5,7 @@ substitutions:
 
 packages:
   jxd-d3-pm3-3: !include ../include/jxd-d3-pm3-3.yaml
-
+  energy: !include ../include/jxd-pm380-energy.yaml
 
 esphome:
   name: ${lowercase_name}
@@ -97,9 +97,9 @@ time:
     id: sntp_time
     timezone: Europe/Moscow
     servers:
-     - 0.pool.ntp.org
-     - 1.pool.ntp.org
-     - 2.pool.ntp.org
+      - 0.pool.ntp.org
+      - 1.pool.ntp.org
+      - 2.pool.ntp.org
 # синхронизация времени
     on_time_sync:
       then:
@@ -194,7 +194,6 @@ sensor:
     web_server:
       sorting_group_id: device
       sorting_weight: 1
-  
 
 binary_sensor:
   - platform: gpio
@@ -215,5 +214,3 @@ switch:
     web_server:
       sorting_group_id: device
       sorting_weight: 1
-
-  
