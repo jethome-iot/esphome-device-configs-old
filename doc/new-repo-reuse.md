@@ -10,8 +10,8 @@
 | # | Что | Решение (2026-10-07) |
 |---|---|---|
 | 1 | `web_server_idf` (фикс паники при зависшем клиенте `/events`) | Пока не делаем. Вернуться до первого релиза или при bump ESPHome, где фикс уже есть |
-| 2 | Board и features packages вместо CPU-блоков в PM-конфигах | Сделано: `include/boards/`, `include/features/` (без `jethome_board_info`, `status_indicator` и vendored `i2c_eeprom`) |
-| 3 | `fram_store` из `feature/fram-store` | Делаем, вместе с картой FRAM из `features/fram.yaml` нового репо |
+| 2 | Board и features packages вместо CPU-блоков в PM-конфигах | Сделано: `include/boards/`, `include/features/` (без `jethome_board_info` и `status_indicator`) |
+| 3 | `fram_store` из `feature/fram-store` | Сделано: `fram_store` и `i2c_eeprom` с `type: fram`, карта FRAM layout v1 (`include/features/fram.yaml`), записи счётчиков в `components/pm_energy` |
 | 4 | Один общий форк меню | Пока не делаем. Наши хунки: `type: value`, `reset_menu()`, `apply_on_confirm`, `weight` |
 | 6 | CI и pre-commit | Пока не делаем |
 | 8 | Пароль на web-интерфейс | Пока без пароля |
@@ -54,7 +54,7 @@
 |---|---|---|---|---|
 | 1 | `components/web_server_idf` + `features/web-server-idf-backport.yaml`; в ветке `fix/httpd-stack` стек httpd 8192 | Фикс use-after-free при зависшем клиенте `/events` (ESPHome PR #17800, в 2026.9.1 его нет). У PM `web_server v3` с `/events` — тот же риск паники через часы работы | S. Удалить после bump на релиз с #17800 | Да, первым |
 | 2 | `boards/jxd-cpu-e1eth.yaml` (версия из `refactor/shared-packages`) + `features/{i2c,rtc-time,vin-measure,display-off}.yaml` | Убирает ~150 строк CPU-блоков из `jxd-pm220-e1eth-base.yaml` и обоих PM380. PM380 получает HA time и timezone по умолчанию вместо зашитой `Europe/Moscow` | S–M, риски ниже | Да |
-| 3 | `feature/fram-store`: `components/fram_store`, `i2c_eeprom type: fram`, `features/fram.yaml` | Две копии на slot, переживает обрыв питания, host-тесты. Заменяет наши `EnergyStore` / `ChannelEnergyStore` и убирает `esphome: includes: *.h` | M. Ветка не влита, сначала утвердить карту FRAM | Да, после решения по карте |
+| 3 | `feature/fram-store`: `components/fram_store`, `i2c_eeprom type: fram`, `features/fram.yaml` | Две копии на slot, переживает обрыв питания, host-тесты. Заменяет наши `EnergyStore` / `ChannelEnergyStore` и убирает `esphome: includes: *.h` | M. Ветка не влита | Сделано |
 | 4 | Форк меню (`components/display_menu_base`, `graphical_display_menu`) + `scripts/vendored-diff.py`, маркеры `JetHome:`, тесты | Свежий upstream (уходят 9 warnings), `back()` возвращает bool, пустые submenu, weight на корне, pre-commit следит за устареванием | M. Перенести наши хунки (`type: value`, `reset_menu()`, `apply_on_confirm`) или взять `deferred_edit` из `feature/menu-deferred-edit` — но там BACK применяет значение, а у нас отменяет. Лучше один общий форк | Да |
 | 5 | Общие display packages из `refactor/shared-packages` | Удаляет `jxd-pm{220,380}-e1eth-buttons.yaml` и большую часть двух display-файлов | M, зависит от п.4 | Да |
 | 6 | CI и гигиена: `.pre-commit-config.yaml`, `.github/workflows/ci.yml`, `firmwares.yaml` + `scripts/firmware-matrix.py`, `esphome-release-check.yml`, dependabot, `requirements-dev.txt`, `scripts/setup.sh` | Валидация всех конфигов на каждый push — битые R6 выше не прошли бы незамеченными | S для lint/validate, M для compile-матрицы (self-hosted runners) | Да |
@@ -77,13 +77,14 @@
   править. `energy_clear` через `!extend` на `run_factory_reset` встанет после
   `App.safe_reboot()` и не выполнится — нужен hook до reboot.
 - **п.9.** Flatten как в `build-dist.py` на `jxd-pm380-e1eth.yaml` даёт три одинаковых
-  `energy_counter_${slot}`: vars из `!include` теряются (в новом репо vars нигде нет). Кроме того,
-  `esphome: includes: ../include/*.h` скрипт отвергнет как локальный путь. Нужно научить
-  build-dist применять vars и унести `.h` в компонент.
+  `energy_counter_${slot}`: vars из `!include` теряются (в новом репо vars нигде нет). Нужно
+  научить build-dist применять vars. (`esphome: includes: *.h`, который скрипт отверг бы как
+  локальный путь, уже убран: описания записей FRAM в компоненте `pm_energy`.)
 
 **Межфайловые контракты PM:** `fram_cpu`, `pcf8563_time`, `energy_loaded`, globals `energy_*`,
 `display1`, `check_blank_page`, `display_off_s`, `ip`, `link_icon`, `info_submenu`,
-`menu_settings_id`, порядок записи двух FRAM-записей.
+`menu_settings_id`, slot'ы `fram_counter_00–09` с записями из `pm_energy` и порядок сохранения:
+каналы PM220 раньше сумм.
 
 ### Что обновилось в уже перенесённом
 
@@ -93,13 +94,13 @@
 - **Sorting groups.** В `refactor/shared-packages` группу объявляет package, которому принадлежат
   сущности. Наши `device` и `mains` стоит привести к `group_*`.
 - **Калибровка.** `jethome_board_info` в `meter-cal-record` стал списком (несколько EEPROM) — для
-  PM нужна эта форма: 0x54 и 0x56. Vendored `i2c_eeprom` брать из `fram-store` (`type: fram`):
-  без него `put()` режет запись по 8 байт с `delay(5)`, и `energy_save` (192 байта каждые 10 с)
-  держал бы loop ~120 мс. `github://pilotak/esphome-eeprom` сейчас не закреплён на ref.
-- **Карта FRAM конфликтует.** В `features/fram.yaml` нового репо 0x0000–0x01FF отдано стенду,
-  `fram_store_meter` занимает 0x0200–0x06BF, счётчики 0x06C0–0x0DDF. У нас `EnergyStore` на
-  0x0100, `ChannelEnergyStore` на 0x0180, UserCal планируется на 0x0200/0x0280. Одну карту надо
-  утвердить до первого отгруженного устройства.
+  PM нужна эта форма: 0x54 и 0x56. Vendored `i2c_eeprom` уже взят из `fram-store` (`type: fram`),
+  pilotak больше не используется. `jethome_board_info` пока не перенесён: он включает
+  write-protect на `eeprom_cpu`, а self-test в `tests/test-i2c.yaml` в неё пишет.
+- **Карта FRAM.** Принят layout v1 нового репо (`include/features/fram.yaml`): 0x0000–0x01FF —
+  стенд, `fram_store_meter` 0x0200–0x06BF, счётчики 0x06C0–0x0DDF, свободно с 0x0DE0.
+  Пользовательская калибровка PM220 пойдёт новым store в свободную область
+  (`doc/pm220-calibration.md`, §3.2).
 
 ## 2. Раскладка YAML
 
@@ -170,11 +171,10 @@ components/  scripts/  dist/  doc/  firmwares.yaml
 | 6 блоков `channel_N` BL0906 и 3 блока `phase_x` ATM90E32 | — | номер | package с vars и `- id: !extend bl0906_chip` (проверить `esphome config` первым делом) |
 | `vars: {display_settings_id: display1}` в 8 местах | — | всегда `display1` | убрать var |
 
-- **Energy.** Общее (globals, Today/Yesterday/Month/Last month, rollover, `EnergyStore`, 3 slot'а,
-  «Reset all») уходит в `features/energy.yaml`. Контракт: `script energy_add(delta_wh)` и hook'и
-  `energy_reset_hook` / `energy_refresh`, которые устройство дополняет через `!extend`.
-  `jxd-pm380-energy-store.h` подключён и в PM220 (magic `"PM38"`): файл переименовать, magic
-  оставить, иначе счётчики обнулятся.
+- **Energy.** Общее (globals, Today/Yesterday/Month/Last month, rollover, 3 slot'а, «Reset all»)
+  уходит в `features/energy.yaml`. Контракт: `script energy_add(delta_wh)` и hook'и
+  `energy_reset_hook` / `energy_refresh`, которые устройство дополняет через `!extend`. Записи
+  FRAM уже общие: `CounterRecord` и `PeriodsRecord` в `components/pm_energy`.
 - **Display.** В общее уходит всё, кроме P total (PM220 — `total_power` чипа, PM380 — сумма фаз;
   PM380 стоит завести template sensor `total_power`), id температуры и VIN (унифицировать:
   `meter_temperature`, `vin_meas`), корня меню и Calibration у PM380.
@@ -193,10 +193,11 @@ components/  scripts/  dist/  doc/  firmwares.yaml
    R6/E1. В `.gitignore` добавить `devices/*/.esphome/`.
 2. **Board и features (S–M).** Переименования сущностей — сейчас, до релиза.
 3. **Слияние дублей (M).** Затем удалить `_v2` и все `jxd-pm{220,380}-*` из `include/`.
-4. **Компоненты (M):** форк меню, `i2c_eeprom` (fram), `status_indicator`, `web_server_idf`.
+4. **Компоненты (M):** форк меню, `status_indicator`, `web_server_idf`. `i2c_eeprom` (fram) —
+   сделано.
 5. **Self-tests (S)** в `packages/factory-test/`; убрать запись в байт 0x0001 EEPROM 0x54/0x56
    (см. §3.4 `doc/pm220-calibration.md`).
-6. **FRAM (M):** `fram_store` после утверждения карты; `.h` исчезают.
+6. ~~**FRAM (M):** `fram_store` после утверждения карты; `.h` исчезают.~~ Сделано.
 7. **`dist/` (M):** `build-dist.py` с фиксом vars, после этого `dashboard_import`.
 8. **Релизы (L):** firmware-update, release workflows, slug'и.
 

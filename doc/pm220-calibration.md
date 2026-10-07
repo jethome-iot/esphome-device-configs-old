@@ -16,8 +16,8 @@
   схеме) и едет вместе с платой. Формат — `meter.cal` v1, он уже описан и реализован в соседнем
   репозитории `esphome-device-configs` (ветка `feature/meter-cal-record`). Один и тот же файл
   прочитают обе прошивки.
-- Пользовательская запись — в FRAM на CPU board, по адресу 0x0200, в двух копиях, с привязкой
-  к CRC заводской записи.
+- Пользовательская запись — в FRAM на CPU board, в своём `fram_store` в свободной области
+  (0x0DE0), в двух копиях, с привязкой к CRC заводской записи.
 - Масштабирование делаем в software, в собственном форке `bl0906`. В register'ы чипа пишем
   только фазовую поправку (PHASE) и пороги creep и восстанавливаем их после каждого сброса чипа.
   Форк нужен в любом случае: убрать захардкоженные RMSOS и получить сырые значения register'ов.
@@ -221,14 +221,19 @@ bit 4 — фаза, bit 5 — приёмка на стенде пройдена.
 
 ### 3.2 Пользовательская запись — FRAM на CPU board
 
-Две копии по 128 байт: A на 0x0200, B на 0x0280. Сохраняем в ту, что старше, поднимая
-`sequence`. При загрузке берём валидную копию с большим `sequence`. FRAM пишется за
-миллисекунды, но питание может пропасть и в эту миллисекунду, а пользовательская калибровка —
-это работа человека, терять её обидно.
+Своя запись в своём `fram_store`: `fram_store_calibration` с `base_offset: 0x0DE0` в свободной
+области layout v1 (раздел 3.3), один slot `fram_user_cal` на 128 байт. Две копии, выбор свежей и
+проверку целостности даёт сам `fram_store`: сохранение идёт в старшую копию и становится текущим,
+только когда записано целиком. FRAM пишется за миллисекунды, но питание может пропасть и в эту
+миллисекунду, а пользовательская калибровка — это работа человека, терять её обидно.
+
+Отдельный store, а не slot в `fram_store_counters`: у закреплённого store нельзя менять размер
+slot'ов, а 48 байт на калибровку мало. И factory reset тогда очищает калибровку отдельно от
+счётчиков.
 
 ```cpp
-// PM220 user calibration in FRAM: two slots, the valid one with the higher sequence wins.
-// Fields are ordered so the struct has no padding and the CRC covers defined bytes only.
+// PM220 user calibration, the fram_user_cal slot of fram_store_calibration. fram_store keeps the
+// two copies; the record, like those of pm_energy, starts with its kind and version.
 struct UserCalStore {
   float v_gain;                     // 1 = none
   std::array<float, 6> i_gain;      // 1 = none
@@ -237,45 +242,47 @@ struct UserCalStore {
   std::array<float, 6> p_offset_w;
   uint32_t offset_mask;             // bit n: channel n + 1 has its own no-load offsets
   uint32_t factory_crc32;           // meter.cal this was taken over; 0 = design values
-  uint32_t sequence;                // bumped on every save
   uint32_t timestamp;               // UTC of the last change, 0 = unknown
   uint32_t magic;                   // "PMUC"
   uint16_t version;                 // 1
-  uint16_t crc;                     // esphome::crc16 up to this field
+  uint16_t reserved0;
+  uint8_t reserved[8];
 };
-static_assert(sizeof(UserCalStore) == 124, "UserCalStore layout changed, bump USER_CAL_VERSION");
+static_assert(sizeof(UserCalStore) == 128, "UserCalStore must fill the fram_user_cal slot");
 static const uint32_t USER_CAL_MAGIC = 0x504D5543;  // "PMUC"
 static const uint16_t USER_CAL_VERSION = 1;
-static const uint16_t USER_CAL_ADDRESS[2] = {0x0200, 0x0280};
 ```
 
 Правила:
 
-- Нет валидной копии — пользовательского слоя нет (все u = 1).
+- Нет валидной копии или чужой `magic` — пользовательского слоя нет (все u = 1).
 - `factory_crc32` не совпадает с CRC текущей `meter.cal` (или с 0, если записи нет) — слой не
   применяется, в статусе «user calibration belongs to another factory record». Из FRAM ничего не
   стираем, пока пользователь не сделает Run или Clear.
 - Неизвестная `version` — копию не трогаем и не используем: её записала более новая firmware.
 - Каждый коэффициент при загрузке проверяем на те же пределы, что и при Run (раздел 5.4). Если
   хоть один вне пределов, слой целиком не применяется.
-- Factory reset из меню и из HA обнуляет `magic` в обеих копиях: устройство возвращается к
-  заводской калибровке. Заводскую запись factory reset не трогает никогда.
+- Factory reset из меню и из HA форматирует `fram_store_calibration` (`format()`, как
+  `energy_clear` делает со счётчиками): устройство возвращается к заводской калибровке.
+  Заводскую запись factory reset не трогает никогда.
 
-### 3.3 Карта FRAM после изменений
+### 3.3 Карта FRAM
 
-| Адрес | Размер | Что | Где описано |
-| --- | --- | --- | --- |
-| 0x0001 | 1 | тестовый байт стенда | `tests/test-i2c.yaml` |
-| 0x0100 | 88 | `EnergyStore` | `include/jxd-pm380-energy-store.h` |
-| 0x0180 | 104 | `ChannelEnergyStore`, v3 → v4 (раздел 6) | `include/jxd-pm220-channel-store.h` |
-| 0x0200 | 124 (слот 128) | `UserCalStore`, копия A | новое |
-| 0x0280 | 124 (слот 128) | `UserCalStore`, копия B | новое |
-| 0x0300–0x1FFF | — | свободно | |
+Разметка — layout v1 из `esphome-device-configs` (ветка `feature/fram-store`), здесь это
+`include/features/fram.yaml`. Закреплённые store менять нельзя: любое изменение их регионов
+очищает store на всех устройствах. Новые данные — только новым store в свободной области.
 
-В `esphome-device-configs` (ветка `feature/fram-store`) у FRAM другая разметка: 0x0000–0x01FF
-отдан стенду, с 0x0200 начинается `fram_store_meter`. При переходе устройства на новую firmware
-этот диапазон будет отформатирован, и пользовательская калибровка сама не переедет (вопрос 11
-из чек-листа, раздел 8).
+| Адрес | Что | Где описано |
+| --- | --- | --- |
+| 0x0000–0x01FF | область стенда. Self-test пишет байт в 0x0001; старые записи PM на 0x0100 и 0x0180 больше никто не читает | `tests/test-i2c.yaml` |
+| 0x0200–0x06BF | `fram_store_meter`: `fram_meter_board` (0x0220), `fram_odometers` (0x02B0). Объявлен, пока не используется | `include/features/fram.yaml` |
+| 0x06C0–0x0DDF | `fram_store_counters`: slot'ы `fram_counter_00–15` по 48 байт с 0x06E0, шаг 0x70 (две копии) | `components/pm_energy/pm_energy.h` |
+| 0x0DE0–0x0F0F | `fram_store_calibration`: superblock и `fram_user_cal` 128 байт в двух копиях | новое (раздел 3.2) |
+| 0x0F10–0x1FFF | свободно | |
+
+Что лежит в `fram_store_counters`: `fram_counter_00–02` — Energy Counter 1–3, `03` — сегодня,
+вчера и месяцы одной записью, `04–09` — Energy Channel 1–6 вместе с показанием чипа (PM220),
+`10–15` свободны.
 
 ### 3.4 Что нужно исправить ещё до того, как завод начнёт писать в EEPROM
 
@@ -283,12 +290,10 @@ static const uint16_t USER_CAL_ADDRESS[2] = {0x0200, 0x0280};
    `eeprom_cpu`. Это второй байт magic `JETHOME`: если тест запустить после записи заголовка,
    плата потеряет и идентичность, и калибровку. Тест нужно перенести на scratch page 0x1FE0
    (8160), как в разметке `esphome-device-configs`.
-2. `i2c_eeprom` от pilotak (`github://pilotak/esphome-eeprom`) отправляет `put()` одной
-   транзакцией и не режет её по страницам. У CAT24C64 страница 32 байта: запись через границу
-   страницы заворачивается в её начало и портит данные. Для FRAM это не страшно, для EEPROM
-   платы измерения — страшно. В `esphome-device-configs` лежит vendored-версия того же
-   компонента: та же YAML-схема, плюс `page_size`, `type: fram` и защита от записи, которую
-   включает `jethome_board_info`. Предлагаю перейти на неё.
+2. ~~`i2c_eeprom` от pilotak не режет запись по страницам.~~ Сделано: стоит vendored
+   `i2c_eeprom` из `esphome-device-configs` (`components/i2c_eeprom/`) с `page_size` и
+   `type: fram`. У `eeprom_per` сейчас `page_size` по умолчанию, 8 байт: это безопасно для
+   страницы CAT24C64 в 32 байта, но можно поставить 32.
 
 ## 4. Заводская калибровка
 
@@ -536,10 +541,9 @@ Settings
 
 - Clear Gain: u_v = 1, u_i = u_p = 1. Clear Offset: `offset_mask` = 0. В обоих случаях
   сохраняем и применяем сразу.
-- Factory reset (Settings → Factory reset, кнопка HA) дополнительно делает недействительными
-  обе копии `UserCalStore`. Сейчас обработчик — это `global_preferences->reset()` в
-  `include/jxd-pm220-e1eth-display.yaml`. Энергетические счётчики в FRAM factory reset сейчас не
-  сбрасывает — это отдельный вопрос (вопрос 8 из чек-листа, раздел 8).
+- Factory reset (Settings → Factory reset, кнопка HA) дополнительно форматирует
+  `fram_store_calibration`. Сейчас обработчик в `include/jxd-pm220-e1eth-display.yaml` вызывает
+  `energy_clear` (форматирует `fram_store_counters`), затем `global_preferences->reset()`.
 
 ### 5.7 Статус
 
@@ -560,10 +564,10 @@ Settings
 
 `include/jxd-pm220-energy.yaml` раз в 10 s берёт состояния `energy_1…6`, а это уже kWh: CF ×
 константа ESPHome × 0.8. Разницу с прошлым чтением он добавляет к счётчикам, а сами прошлые
-чтения хранит в FRAM в kWh (`ChannelEnergyStore.chip_kwh`). Если поменять масштаб, следующее
-чтение расходится с сохранённым, и счётчик прыгает. Поэтому для поправки 0.8 пришлось поднять
-`CHANNEL_STORE_VERSION` до 3 и потерять точки отсчёта. С калибровкой масштаб менялся бы
-постоянно.
+чтения хранит в FRAM в kWh: поле `chip_kwh` записи `CounterRecord` канала
+(`fram_counter_04–09`, `components/pm_energy/pm_energy.h`). Если поменять масштаб, следующее
+чтение расходится с сохранённым, и счётчик прыгает: для поправки 0.8 пришлось сбросить точки
+отсчёта. С калибровкой масштаб менялся бы постоянно.
 
 ### 6.2 Как предлагаю
 
@@ -575,10 +579,10 @@ Settings
   у самого верха (ближе 1 kWh до 2²⁴), а новое маленькое, — это переполнение:
   Δ = new + 2²⁴ − last. Иначе чип перезапустился, и Δ = new. Защита «больше 1 kWh за проход —
   не считать» остаётся, это 5608 импульсов.
-- `ChannelEnergyStore` v4: `std::array<uint32_t, 6> chip_cnt` вместо
-  `std::array<float, 6> chip_kwh`. Размер прежний, 104 байта. Значение 0xFFFFFFFF значит
-  «неизвестно».
-- Переход v3 → v4 без потерь: в v3 лежат kWh, посчитанные как CF × 0.000178330 kWh. Загрузчик
+- `CounterRecord` v2: `uint32_t chip_cnt` вместо `float chip_kwh`, место есть в `reserved`.
+  Размер записи прежний, 48 байт, slot'ы `fram_store_counters` не меняются. Значение
+  0xFFFFFFFF значит «неизвестно».
+- Переход v1 → v2 без потерь: в v1 лежат kWh, посчитанные как CF × 0.000178330 kWh. Загрузчик
   восстанавливает `chip_cnt = lroundf(chip_kwh / 0.000178330114f)` с точностью до импульса, и
   пользовательские счётчики продолжают идти с того же места.
 
@@ -603,11 +607,11 @@ Settings
 
 | # | Что | Файлы | Оценка |
 | --- | --- | --- | --- |
-| 1 | Перейти на `i2c_eeprom` из `esphome-device-configs` (page split, защита записи, `type: fram`); перенести тестовую запись на scratch page | `components/i2c_eeprom/`, `include/jxd-pm220-e1eth-base.yaml`, PM380-конфиги, `tests/test-i2c.yaml` | 0.5–1 д |
+| 1 | ~~Перейти на `i2c_eeprom` из `esphome-device-configs`~~ — сделано. Осталось перенести тестовую запись на scratch page | `tests/test-i2c.yaml` | 0.25 д |
 | 2 | Чтение заводской записи: vendor `jethome_board_info` и `meter_calibration`, добавить `reload()`; `meter_board_info` на `eeprom_per` с `required: false` | `components/…`, include | 0.5 д |
 | 3 | Форк `bl0906`: сырой цикл, конвертер, RMSOS = 0, PHASE/creep с read-back и контрольным register'ом, восстановление после `reset_energy` и сброса чипа, счётчик сбросов | `components/bl0906/` | 2–3 д |
-| 4 | Компонент `pm220_calibration`: слои, `UserCalStore` A/B в FRAM, Run/Clear, ограничения, статус, `wh_per_pulse()`, порядок setup | `components/pm220_calibration/` | 2 д |
-| 5 | Энергия: `ChannelEnergyStore` v4, переход v3 → v4, переполнение; `Energy_N` → internal; `Total_Power` = Σ; убрать `divider_correction` | `include/jxd-pm220-energy.yaml`, `include/jxd-pm220-channel-store.h`, base | 0.5–1 д |
+| 4 | Компонент `pm220_calibration`: слои, `UserCalStore` в `fram_store_calibration`, Run/Clear, ограничения, статус, `wh_per_pulse()`, порядок setup | `components/pm220_calibration/`, `include/features/fram.yaml` | 2 д |
+| 5 | Энергия: `CounterRecord` v2 с `chip_cnt`, переход v1 → v2, переполнение; `Total_Power` = Σ; убрать `divider_correction` | `include/jxd-pm220-energy.yaml`, `components/pm_energy/`, base | 0.5–1 д |
 | 6 | Сущности и меню, factory reset чистит пользовательский слой | `include/jxd-pm220-calibration.yaml`, `include/jxd-pm220-cal-channel.yaml`, display | 1 д |
 | 7 | Factory build и actions, запись JEEFS с проверками | `JXD/jxd-pm220-e1eth-factory.yaml`, `include/jxd-pm220-factory-cal.yaml` | 1.5–2 д |
 | 8 | Стенд: драйверы источника и эталона, поправка на эталонные CT, отчёты; подбор допусков на 5–10 платах | `scripts/calibration/` | 2–3 д + наладка |
@@ -615,12 +619,14 @@ Settings
 | 10 | Run/Clear Offset для пользователя | компонент из п. 4 | 0.5 д |
 | 11 | PM380: заводская запись через сеттеры `atm90e32` (по желанию) | `include/jxd-d3-pm3-3.yaml` | 1 д |
 
-Итого примерно 12–17 человеко-дней без наладки стенда. Порядок важен: п. 1 нужен раньше, чем
-завод начнёт писать заголовки; п. 3–5 можно выкатывать и без заводской записи, на номинале.
+Итого примерно 11–16 человеко-дней без наладки стенда. Порядок важен: перенос тестовой записи
+(п. 1) нужен раньше, чем завод начнёт писать заголовки; п. 3–5 можно выкатывать и без заводской
+записи, на номинале.
 
-Порядок setup: `i2c_eeprom` (600) → `jethome_board_info` (599) → `meter_calibration` (598.5) →
-`pm220_calibration` (598.25, читает FRAM и отдаёт конвертер) → форк `bl0906` (598, первый
-опрос уже с конвертером).
+Порядок setup: `i2c_eeprom` (600) → `fram_store` (599, store инициализируется при первом
+обращении) → `jethome_board_info` (599) → `meter_calibration` (598.5) → `pm220_calibration`
+(598.25, читает FRAM и отдаёт конвертер) → форк `bl0906` (598, первый опрос уже с
+конвертером).
 
 ## 8. Чек-лист вопросов
 
@@ -656,9 +662,10 @@ Settings
 - [ ] **10. Формат `meter.cal`.** Он общий для двух репозиториев. Кто его владелец и когда ветка
   `feature/meter-cal-record` будет влита?
   Ответ:
-- [ ] **11. Новая firmware.** Переносить ли пользовательскую калибровку при переходе устройства на
+- [x] **11. Новая firmware.** Переносить ли пользовательскую калибровку при переходе устройства на
   новую firmware?
-  Ответ:
+  Ответ: вопрос снят. Карта FRAM уже как в новом репо (layout v1), калибровка будет жить в своём
+  store в свободной области и никуда переезжать не будет.
 - [ ] **12. WP микросхемы U3.** Выводить ли его на стенд в следующей ревизии платы?
   Ответ:
 
