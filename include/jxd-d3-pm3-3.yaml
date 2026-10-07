@@ -1,4 +1,7 @@
 # JXD-D3-PM3-3 Rev 1.0
+# Verified on hardware: ATM90E32 CS is SPI_CS1 (GPIO15), PM1 is not driven from the socket.
+# The Rev 1.2 schematic moves CS to UART1_TX (GPIO33) and adds optocoupled
+# IRQ0 -> GPIO34, PM1 <- GPIO32, WarnOut -> GPIO39; Rev 1.2 boards will need those.
 spi:
   - id: spi_bus1
     interface: hardware
@@ -17,21 +20,28 @@ substitutions:
 
 sensor:
   - platform: atm90e32
+    id: atm90e32_chip
     cs_pin: GPIO15
     phase_a:
       voltage:
         name: "Voltage L1"
+        id: voltage_l1
         accuracy_decimals: 1
       current:
         name: "Current phase L1"
+        id: current_l1
       power:
         name: "Active Power L1"
+        id: active_power_l1
       reactive_power:
         name: "Reactive Power L1"
+        id: reactive_power_l1
       power_factor:
         name: "Power Factor L1"
+        id: power_factor_l1
       phase_angle:
         name: "Phase Angle L1"
+        id: phase_angle_l1
 
       gain_voltage: ${gain_voltage_1}
       gain_ct: ${gain_ct1}
@@ -43,17 +53,23 @@ sensor:
     phase_b:
       voltage:
         name: "Voltage L2"
+        id: voltage_l2
         accuracy_decimals: 1
       current:
         name: "Current phase L2"
+        id: current_l2
       power:
         name: "Active Power L2"
+        id: active_power_l2
       reactive_power:
         name: "Reactive Power L2"
+        id: reactive_power_l2
       power_factor:
         name: "Power Factor L2"
+        id: power_factor_l2
       phase_angle:
         name: "Phase Angle L2"
+        id: phase_angle_l2
       gain_voltage: ${gain_voltage_2}
       gain_ct: ${gain_ct2}
       offset_voltage: 0
@@ -64,28 +80,36 @@ sensor:
     phase_c:
       voltage:
         name: "Voltage L3"
+        id: voltage_l3
         accuracy_decimals: 1
       current:
         name: "Current phase L3"
+        id: current_l3
       power:
         name: "Active Power L3"
+        id: active_power_l3
       reactive_power:
         name: "Reactive Power L3"
+        id: reactive_power_l3
       power_factor:
         name: "Power Factor L3"
+        id: power_factor_l3
       phase_angle:
         name: "Phase Angle L3"
-      gain_voltage:  ${gain_voltage_3}
+        id: phase_angle_l3
+      gain_voltage: ${gain_voltage_3}
       gain_ct: ${gain_ct3}
       offset_voltage: 0
       offset_current: 0
       offset_active_power: 0
       offset_reactive_power: 0
-    
+
     frequency:
       name: "Line Frequency"
+      id: line_frequency
     chip_temperature:
       name: "ATM90E32 Temperature"
+      id: atm90e32_temperature
     line_frequency: 50Hz
     current_phases: 3
     gain_pga: 2X
@@ -98,41 +122,57 @@ text_sensor:
     phase_status:
       phase_a:
         name: "Phase L1 Status"
+        id: phase_status_l1
       phase_b:
         name: "Phase L2 Status"
+        id: phase_status_l2
       phase_c:
         name: "Phase L3 Status"
+        id: phase_status_l3
     frequency_status:
       name: "Frequency Status"
+      id: frequency_status
 
 button:
   - platform: atm90e32
     run_gain_calibration:
       name: "Run Gain Calibration"
+      id: run_gain_calibration
     clear_gain_calibration:
       name: "Clear Gain Calibration"
+      id: clear_gain_calibration
     run_offset_calibration:
       name: "Run Offset Calibration"
+      id: run_offset_calibration
     clear_offset_calibration:
       name: "Clear Offset Calibration"
+      id: clear_offset_calibration
     run_power_offset_calibration:
       name: "Run Power Offset Calibration"
+      id: run_power_offset_calibration
     clear_power_offset_calibration:
       name: "Clear Power Offset Calibration"
+      id: clear_power_offset_calibration
 
 number:
   - platform: atm90e32
     reference_voltage:
       phase_a:
         name: "Phase L1 Ref Voltage"
+        id: ref_voltage_l1
       phase_b:
         name: "Phase L2 Ref Voltage"
+        id: ref_voltage_l2
       phase_c:
         name: "Phase L3 Ref Voltage"
+        id: ref_voltage_l3
     reference_current:
       phase_a:
         name: "Phase L1 Ref Current"
+        id: ref_current_l1
       phase_b:
         name: "Phase L2 Ref Current"
+        id: ref_current_l2
       phase_c:
         name: "Phase L3 Ref Current"
+        id: ref_current_l3
