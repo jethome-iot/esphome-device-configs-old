@@ -46,7 +46,6 @@ script:
             allocator.deallocate(mem, max_size);
             id(psram_result_bool).publish_state(true);
 
-
           } else {
             ESP_LOGE(TAG, "PSRAM wasn't finded");
             id(psram_result_bool).publish_state(false);
@@ -71,8 +70,8 @@ script:
           static const char* TAG = "test";
           id(vin_result_bool).publish_state(false);
 
-          if (id(vin_voltage).has_state()) {
-            float vin_voltage_value = id(vin_voltage).state;
+          if (id(vin_meas).has_state()) {
+            float vin_voltage_value = id(vin_meas).state;
 
             if(vin_voltage_value >= 0 && vin_voltage_value < 60) {
               id(vin_result_bool).publish_state(true);
@@ -122,7 +121,7 @@ script:
           id: result_test
           test_name: "POE voltage"
           test_result: !lambda return id(poe_result_bool).state;
-  
+
       - script.execute:
           id: finished_test
           test_name: "POE voltage"
@@ -143,7 +142,7 @@ script:
 
           // id(display1).clear();
           // id(display1).printf(w/2, line_spacing, id(f7x14_mod2), TextAlign::CENTER_HORIZONTAL ,"%s test",test_name.c_str());
-          
+
   - id: finished_test
     parameters:
       test_name: string
@@ -240,7 +239,7 @@ script:
 
           // if(
           //    id(eeprom_per_result_bool).state &&
-          //    id(one_wire_result_bool).state &&             
+          //    id(one_wire_result_bool).state &&
           //    in1_6_result && r1_r6_result && jxm_result_common) {
 
           //   test_result_full = true;
@@ -279,4 +278,3 @@ interval:
             - delay: 500ms
           # else:
           #   - switch.turn_on: red_led
-

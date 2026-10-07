@@ -103,7 +103,7 @@ globals:
   - id: down_result_displayed
     type: bool
     restore_value: no
-    initial_value: 'false'  
+    initial_value: 'false'
   - id: left_result_displayed
     type: bool
     restore_value: no
@@ -370,7 +370,7 @@ web_server:
 #   - uart_id: jxm2_uart
 #     id: jxm2_modbus_server
 #     role: server
-    
+
 # modbus_controller:
 #   - id: jxm1_modbus_controller
 #     modbus_id: jxm1_modbus_client
@@ -442,9 +442,8 @@ text_sensor:
 
     update_interval: 1s
     web_server:
-      sorting_group_id: device
+      sorting_group_id: group_system
       sorting_weight: 1
-
 
 button:
   - platform: template
@@ -468,7 +467,7 @@ button:
   #   on_press:
   #     then:
   #       - script.execute: test_display
-    
+
   # - platform: template
   #   name: "Test jxm"
   #   id: test_jxm_start

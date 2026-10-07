@@ -3,9 +3,18 @@ substitutions:
   friendly_name: JXD-PM220-E1ETH
   device_description: JXD-PM220-E1ETH v1.0
   version: 1.0.0
-  timezone: GMT
+  # Paths relative to this file.
+  boards: ../include/boards
+  features: ../include/features
 
 packages:
+  # The CPU board and its features, as in esphome-device-configs.
+  board: !include ${boards}/jxd-cpu-e1eth.yaml
+  display_off: !include ${features}/display-off.yaml
+  i2c: !include ${features}/i2c.yaml
+  rtc_time: !include ${features}/rtc-time.yaml
+  vin_measure: !include ${features}/vin-measure.yaml
+
   main: !include ../include/jxd-pm220-e1eth-base.yaml
   energy: !include ../include/jxd-pm220-energy.yaml
   # Ethernet and WiFi, switched at run time by the Network mode select
@@ -23,6 +32,7 @@ esphome:
     version: ${version}
   # A list, so it joins the on_boot of network.yaml rather than replacing it
   on_boot:
+    # Restores the stored timezone and reads the RTC once I2C is up.
     - priority: 600
       then:
         - delay: 200ms

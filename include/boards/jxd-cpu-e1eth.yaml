@@ -1,0 +1,97 @@
+# Here: from esphome-device-configs, branch refactor/shared-packages,
+# devices/JXD/packages/boards/jxd-cpu-e1eth.yaml. Every deviation from it is marked "Here:".
+esp32:
+  board: esp32dev
+  flash_size: 16MB
+  flash_frequency: 80MHz
+  watchdog_timeout: 60s
+  framework:
+    type: esp-idf
+    sdkconfig_options:
+      CONFIG_COMPILER_OPTIMIZATION_SPEED: y
+      CONFIG_D0WD_PSRAM_CLK_IO: "6"
+
+psram:
+  mode: quad
+  speed: 80MHz
+
+api:
+  id: api_server
+  encryption:
+  reboot_timeout: 0s
+
+ota:
+  - platform: esphome
+  - platform: web_server
+
+preferences:
+  flash_write_interval: 5s
+
+# Here: i2c_eeprom is pilotak's, not the vendored copy: the FRAM energy records still go
+# through it. No jethome_board_info (it needs the vendored i2c_eeprom) and no
+# status_indicator: red_led stays the switch the PM boot blink and tests/ drive.
+external_components:
+  - source: github://pilotak/esphome-eeprom
+    components: [i2c_eeprom]
+
+i2c_eeprom:
+  - id: eeprom_cpu
+    size: 64KB
+    address: 0x54
+
+logger:
+  level: debug
+
+web_server:
+  port: 80
+  version: 3
+  # Here: no web_device_dashboard, so / is web_server's own page.
+  # The groups every device has; a package with entities of its own declares its group.
+  sorting_groups:
+    - id: group_network
+      name: "Network"
+      sorting_weight: 50
+    - id: group_system
+      name: "System"
+      sorting_weight: 60
+
+sensor:
+  - platform: tmp102
+    name: "PCB Temp"
+    id: pcb_temp
+    web_server:
+      sorting_group_id: group_system
+      sorting_weight: 1
+    update_interval: 20s
+    entity_category: diagnostic
+
+binary_sensor:
+  - platform: gpio
+    name: "FN"
+    id: fn_button
+    internal: true
+    pin:
+      number: GPIO0
+      inverted: true
+      # The board's boot button: GPIO0 is strapping by design.
+      ignore_strapping_warning: true
+
+# The bi-colour LED: green while the pin is low, red while it is high.
+# Here: a GPIO switch instead of status_indicator (see external_components above).
+switch:
+  - platform: gpio
+    name: "Red led"
+    id: red_led
+    internal: true
+    pin:
+      number: GPIO2
+      # Wired this way by the board's design, like GPIO0.
+      ignore_strapping_warning: true
+
+text_sensor:
+  - platform: uptime
+    name: Uptime
+    id: uptime_sensor
+    internal: true
+    format:
+      separator: " "

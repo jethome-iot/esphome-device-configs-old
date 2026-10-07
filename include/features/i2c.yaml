@@ -1,0 +1,10 @@
+# Here: as in esphome-device-configs, branch refactor/shared-packages,
+# devices/JXD/packages/features/i2c.yaml. The PM configs' old `timeout: 100ms` is gone: on
+# ESP-IDF it only sets the SCL clock-stretch wait (the transaction timeout is a fixed 100 ms),
+# which the driver caps at 13 ms with a warning at boot, and no chip on this bus stretches SCL.
+i2c:
+  - id: i2c1
+    sda: 5
+    scl: 4
+    frequency: 400kHz
+    scan: true

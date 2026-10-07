@@ -1,54 +1,21 @@
+# The JXD-PM220 metering side: BL0906 and the peripheral board's EEPROM. The CPU board itself
+# (ESP32, API, OTA, PCB Temp, FN, LED) and its features (I2C, RTC time, VIN, display off, the
+# FRAM the energy counters live in) come from boards/ and features/ in the device config.
 substitutions: #defaults
   name: "jxd-pm220-e1eth"
   friendly_name: JXD-PM220-E1ETH
   device_description: JXD-PM220-E1ETH v1.0
-  timezone: GMT
   # The module divides mains with 4x20k, the ESPHome BL0906 constants assume 5x20k:
   # voltage, power and energy all read 1.25 times high
   divider_correction: "0.8"
 
-packages:
-  time: !include ../include/pcf8563-time.yaml
-  vin_measure: !include ../include/jxd-r6-vin-measure.yaml
-
-api:
-  encryption:
-  reboot_timeout: 0min
-  on_client_connected:
-    - lambda: |-
-        id(ha_time_source).update();
-
-ota:
-  - platform: esphome
-
-preferences:
-  flash_write_interval: 5s
-
-esp32:
-  board: esp32dev
-  flash_size: 16MB
-  framework:
-    type: esp-idf
-    sdkconfig_options:
-      CONFIG_COMPILER_OPTIMIZATION_SPEED: y
-      CONFIG_D0WD_PSRAM_CLK_IO: "6"
-      CONFIG_D0WD_PSRAM_CS_IO: "16"
-
-psram:
-  mode: quad
-  speed: 80MHz
-
-# Enable logging
 logger:
-  level: debug
   logs:
     esp-idf: INFO
     wifi: INFO
 
-# Enable built-in web server
+# Network and System are declared by boards/jxd-cpu-e1eth.yaml
 web_server:
-  port: 80
-  version: 3
   sorting_groups:
     - id: mains
       name: "Mains"
@@ -74,34 +41,13 @@ web_server:
     - id: energy
       name: "Energy"
       sorting_weight: 20
-    - id: group_network
-      name: "Network"
-      sorting_weight: 30
-    - id: device
-      name: "Device"
-      sorting_weight: 40
 
-external_components:
-  - source: github://pilotak/esphome-eeprom
-    components: [i2c_eeprom]
-
-i2c:
-  sda: 5
-  scl: 4
-  frequency: 400kHz
-  scan: true
-  id: i2c1
-  timeout: 100ms
-
+# i2c_eeprom and the CPU board EEPROM eeprom_cpu come with the board package
 i2c_eeprom:
 # peripheral board eeprom
   - id: eeprom_per
     size: 64KB # size in Kbits
     address: 0x56
-# cpu board eeprom
-  - id: eeprom_cpu
-    size: 64KB # size in Kbits
-    address: 0x54
 # cpu board fram
   - id: fram_cpu
     size: 64KB # size in Kbits
@@ -275,39 +221,3 @@ sensor:
         sorting_weight: 3
       filters:
         - multiply: ${divider_correction}
-
-# temperature sensor
-  - platform: tmp102
-    id: cpu_board_temp
-    address: 0x48
-    name: "PCB TEMPERATURE"
-    update_interval: 20s
-    web_server:
-      sorting_group_id: device
-      sorting_weight: 1
-
-text_sensor:
-  - platform: uptime
-    name: Uptime
-    id: uptime_sensor
-    internal: true
-    format:
-      separator: " "
-
-binary_sensor:
-  - platform: gpio
-    pin:
-      number: GPIO0
-      inverted: true
-    name: "FN button"
-    id: fn_button
-    # The firmware's button, not an entity for HA
-    internal: true
-
-switch:
-  - platform: gpio
-    name: "Red led"
-    id: red_led
-    pin: GPIO2
-    # The firmware's LED, not a control for HA
-    internal: true

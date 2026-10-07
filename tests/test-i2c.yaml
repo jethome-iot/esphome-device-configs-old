@@ -100,7 +100,7 @@ script:
           }
           // Очистка EEPROM
           fram_cpu->put(0x0001, 0x00);
-      
+
       - script.execute:
           id: result_test
           test_name: "FRAM CPU 0x52"
@@ -118,10 +118,10 @@ script:
           static const char* TAG = "test";
           id(cpu_board_temp_result).publish_state(false);
 
-          if(id(cpu_board_temp).has_state()) {
-            if(id(cpu_board_temp).state > 10 && id(cpu_board_temp).state < 55) {
+          if(id(pcb_temp).has_state()) {
+            if(id(pcb_temp).state > 10 && id(pcb_temp).state < 55) {
               id(cpu_board_temp_result).publish_state(true);
-              ESP_LOGI(TAG, "%f", id(cpu_board_temp).state);
+              ESP_LOGI(TAG, "%f", id(pcb_temp).state);
               // ESP_LOGI(TAG, "CPU Board Temperature test OK");
             }
           } else {
@@ -201,7 +201,7 @@ script:
 
           id(display1).clear();
           id(display1).printf(w/2, line_spacing, id(f7x14_mod2), TextAlign::CENTER_HORIZONTAL ,"Display test");
-  
+
       - script.execute:
           id: result_test
           test_name: "Display"
@@ -210,8 +210,6 @@ script:
       - script.execute:
           id: finished_test
           test_name: "Display"
-
-
 
   - id: test_navigation
     then:
@@ -238,7 +236,7 @@ script:
           ESP_LOGI(TAG, "Timeout 60 seconds");
           id(display1).print(w/2, 1*font_height + 3*line_spacing, id(f7x14_mod2), TextAlign::CENTER_HORIZONTAL,"Press up");
           // id(display1).print(0, 2*font_height + 3*line_spacing, id(f7x14_mod2), TextAlign::CENTER_LEFT,"right, center, home, back");
-# Проверка нажатия кнопки "Up"      
+# Проверка нажатия кнопки "Up"
       - wait_until:
           condition:
             - lambda: !lambda return id(up_result_bool).state;
@@ -264,7 +262,7 @@ script:
 
                 id(started_test).execute("Navigation");
                 id(display1).print(w/2, 3*font_height + 3*line_spacing, id(f7x14_mod2), TextAlign::CENTER_HORIZONTAL ,"Up FAILED");
-      
+
 # Проверка нажатия кнопки "Down"
       - delay: 1000ms
       - lambda: |-
@@ -308,7 +306,7 @@ script:
           int line_spacing = 2;
 
           id(started_test).execute("Navigation");
-          id(display1).print(w/2, 1*font_height + 3*line_spacing, id(f7x14_mod2), TextAlign::CENTER_HORIZONTAL,"Press Left");      
+          id(display1).print(w/2, 1*font_height + 3*line_spacing, id(f7x14_mod2), TextAlign::CENTER_HORIZONTAL,"Press Left");
       - wait_until:
           condition:
             - lambda: !lambda return id(left_result_bool).state;
@@ -334,7 +332,7 @@ script:
 
                 id(started_test).execute("Navigation");
                 id(display1).print(w/2, 3*font_height + 3*line_spacing, id(f7x14_mod2), TextAlign::CENTER_HORIZONTAL ,"Left FAILED");
-      
+
 # Проверка нажатия кнопки "Right"
       - delay: 1000ms
       - lambda: |-
@@ -342,7 +340,7 @@ script:
           int h = id(display1).get_height();
           int font_height = id(f7x14_mod2).get_height();
           int line_spacing = 2;
-          
+
           id(started_test).execute("Navigation");
           id(display1).print(w/2, 1*font_height + 3*line_spacing, id(f7x14_mod2), TextAlign::CENTER_HORIZONTAL,"Press Right");
       - wait_until:
@@ -378,7 +376,7 @@ script:
           int h = id(display1).get_height();
           int font_height = id(f7x14_mod2).get_height();
           int line_spacing = 2;
-          
+
           id(started_test).execute("Navigation");
           id(display1).print(w/2, 1*font_height + 3*line_spacing, id(f7x14_mod2), TextAlign::CENTER_HORIZONTAL,"Press Center");
       - wait_until:
@@ -414,7 +412,7 @@ script:
           int h = id(display1).get_height();
           int font_height = id(f7x14_mod2).get_height();
           int line_spacing = 2;
-          
+
           id(started_test).execute("Navigation");
           id(display1).print(w/2, 1*font_height + 3*line_spacing, id(f7x14_mod2), TextAlign::CENTER_HORIZONTAL,"Press Home");
       - wait_until:
@@ -450,7 +448,7 @@ script:
           int h = id(display1).get_height();
           int font_height = id(f7x14_mod2).get_height();
           int line_spacing = 2;
-          
+
           id(started_test).execute("Navigation");
           id(display1).print(w/2, 1*font_height + 3*line_spacing, id(f7x14_mod2), TextAlign::CENTER_HORIZONTAL,"Press Back");
       - wait_until:
