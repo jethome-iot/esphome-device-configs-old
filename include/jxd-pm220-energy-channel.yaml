@@ -3,6 +3,9 @@ sensor:
   - platform: template
     name: "Energy Channel ${channel}"
     id: energy_channel_${channel}
+    web_server:
+      sorting_group_id: channel_${channel}
+      sorting_weight: 3
     lambda: |-
       if (!id(energy_loaded))
         return {};
@@ -18,6 +21,9 @@ text_sensor:
   - platform: template
     name: "Energy Channel ${channel} Reset Time"
     id: energy_channel_${channel}_reset_time
+    web_server:
+      sorting_group_id: channel_${channel}
+      sorting_weight: 4
     device_class: timestamp
     entity_category: diagnostic
     update_interval: 30s
@@ -32,6 +38,9 @@ button:
   - platform: template
     name: "Reset Energy Channel ${channel}"
     id: reset_energy_channel_${channel}
+    web_server:
+      sorting_group_id: channel_${channel}
+      sorting_weight: 5
     icon: mdi:counter
     entity_category: config
     on_press:

@@ -3,6 +3,9 @@ sensor:
   - platform: template
     name: "Energy Counter ${slot}"
     id: energy_counter_${slot}
+    web_server:
+      sorting_group_id: energy
+      sorting_weight: ${slot}1
     lambda: |-
       if (!id(energy_loaded))
         return {};
@@ -18,6 +21,9 @@ text_sensor:
   - platform: template
     name: "Energy Counter ${slot} Reset Time"
     id: energy_counter_${slot}_reset_time
+    web_server:
+      sorting_group_id: energy
+      sorting_weight: ${slot}2
     device_class: timestamp
     entity_category: diagnostic
     update_interval: 30s
@@ -32,6 +38,9 @@ button:
   - platform: template
     name: "Reset Energy Counter ${slot}"
     id: reset_energy_counter_${slot}
+    web_server:
+      sorting_group_id: energy
+      sorting_weight: ${slot}3
     icon: mdi:counter
     entity_category: config
     on_press:

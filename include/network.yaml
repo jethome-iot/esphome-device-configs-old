@@ -84,6 +84,9 @@ select:
   - platform: template
     name: "Network mode"
     id: network_mode
+    web_server:
+      sorting_group_id: group_network
+      sorting_weight: 1
     entity_category: config
     optimistic: true
     restore_value: true
@@ -174,6 +177,9 @@ text_sensor:
   - platform: ethernet_info
     ip_address:
       name: "Ethernet IP"
+      web_server:
+        sorting_group_id: group_network
+        sorting_weight: 2
       address_0:
         id: ip_eth
         on_value:
@@ -181,16 +187,25 @@ text_sensor:
     mac_address:
       name: "Ethernet MAC"
       id: mac_eth
+      web_server:
+        sorting_group_id: group_network
+        sorting_weight: 3
 
   - platform: wifi_info
     ip_address:
       name: "WiFi IP"
       id: ip_wifi
+      web_server:
+        sorting_group_id: group_network
+        sorting_weight: 4
       on_value:
         - component.update: ip
     mac_address:
       name: "WiFi MAC"
       id: mac_wifi
+      web_server:
+        sorting_group_id: group_network
+        sorting_weight: 5
 
   # The address of the interface carrying the traffic, or of the fallback AP,
   # for the main page.

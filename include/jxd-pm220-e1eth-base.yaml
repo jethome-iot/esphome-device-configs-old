@@ -50,9 +50,36 @@ web_server:
   port: 80
   version: 3
   sorting_groups:
+    - id: mains
+      name: "Mains"
+      sorting_weight: 1
+    - id: channel_1
+      name: "Channel 1"
+      sorting_weight: 11
+    - id: channel_2
+      name: "Channel 2"
+      sorting_weight: 12
+    - id: channel_3
+      name: "Channel 3"
+      sorting_weight: 13
+    - id: channel_4
+      name: "Channel 4"
+      sorting_weight: 14
+    - id: channel_5
+      name: "Channel 5"
+      sorting_weight: 15
+    - id: channel_6
+      name: "Channel 6"
+      sorting_weight: 16
+    - id: energy
+      name: "Energy"
+      sorting_weight: 20
+    - id: group_network
+      name: "Network"
+      sorting_weight: 30
     - id: device
-      name: "Device controls"
-      sorting_weight: 10
+      name: "Device"
+      sorting_weight: 40
 
 external_components:
   - source: github://pilotak/esphome-eeprom
@@ -97,21 +124,36 @@ sensor:
     frequency:
       name: 'Frequency'
       id: line_frequency
+      web_server:
+        sorting_group_id: mains
+        sorting_weight: 2
     temperature:
       name: 'Temperature'
       id: bl0906_temperature
+      web_server:
+        sorting_group_id: mains
+        sorting_weight: 4
     voltage:
       name: 'Voltage'
       id: line_voltage
+      web_server:
+        sorting_group_id: mains
+        sorting_weight: 1
       filters:
         - multiply: ${divider_correction}
     channel_1:
       current:
         name: 'Current_1'
         id: current_1
+        web_server:
+          sorting_group_id: channel_1
+          sorting_weight: 1
       power:
         name: 'Power_1'
         id: power_1
+        web_server:
+          sorting_group_id: channel_1
+          sorting_weight: 2
         filters:
           - multiply: ${divider_correction}
       energy:
@@ -124,9 +166,15 @@ sensor:
       current:
         name: 'Current_2'
         id: current_2
+        web_server:
+          sorting_group_id: channel_2
+          sorting_weight: 1
       power:
         name: 'Power_2'
         id: power_2
+        web_server:
+          sorting_group_id: channel_2
+          sorting_weight: 2
         filters:
           - multiply: ${divider_correction}
       energy:
@@ -139,9 +187,15 @@ sensor:
       current:
         name: 'Current_3'
         id: current_3
+        web_server:
+          sorting_group_id: channel_3
+          sorting_weight: 1
       power:
         name: 'Power_3'
         id: power_3
+        web_server:
+          sorting_group_id: channel_3
+          sorting_weight: 2
         filters:
           - multiply: ${divider_correction}
       energy:
@@ -154,9 +208,15 @@ sensor:
       current:
         name: 'Current_4'
         id: current_4
+        web_server:
+          sorting_group_id: channel_4
+          sorting_weight: 1
       power:
         name: 'Power_4'
         id: power_4
+        web_server:
+          sorting_group_id: channel_4
+          sorting_weight: 2
         filters:
           - multiply: ${divider_correction}
       energy:
@@ -169,9 +229,15 @@ sensor:
       current:
         name: 'Current_5'
         id: current_5
+        web_server:
+          sorting_group_id: channel_5
+          sorting_weight: 1
       power:
         name: 'Power_5'
         id: power_5
+        web_server:
+          sorting_group_id: channel_5
+          sorting_weight: 2
         filters:
           - multiply: ${divider_correction}
       energy:
@@ -184,9 +250,15 @@ sensor:
       current:
         name: 'Current_6'
         id: current_6
+        web_server:
+          sorting_group_id: channel_6
+          sorting_weight: 1
       power:
         name: 'Power_6'
         id: power_6
+        web_server:
+          sorting_group_id: channel_6
+          sorting_weight: 2
         filters:
           - multiply: ${divider_correction}
       energy:
@@ -198,6 +270,9 @@ sensor:
     total_power:
       name: 'Total_Power'
       id: total_power
+      web_server:
+        sorting_group_id: mains
+        sorting_weight: 3
       filters:
         - multiply: ${divider_correction}
 

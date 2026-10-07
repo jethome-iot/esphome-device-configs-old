@@ -34,6 +34,9 @@ sensor:
   - platform: template
     name: "Energy Today"
     id: energy_today
+    web_server:
+      sorting_group_id: energy
+      sorting_weight: 41
     lambda: |-
       if (!id(energy_loaded))
         return {};
@@ -46,6 +49,9 @@ sensor:
   - platform: template
     name: "Energy Yesterday"
     id: energy_yesterday
+    web_server:
+      sorting_group_id: energy
+      sorting_weight: 42
     lambda: |-
       if (!id(energy_loaded))
         return {};
@@ -57,6 +63,9 @@ sensor:
   - platform: template
     name: "Energy This Month"
     id: energy_this_month
+    web_server:
+      sorting_group_id: energy
+      sorting_weight: 43
     lambda: |-
       if (!id(energy_loaded))
         return {};
@@ -69,6 +78,9 @@ sensor:
   - platform: template
     name: "Energy Last Month"
     id: energy_last_month
+    web_server:
+      sorting_group_id: energy
+      sorting_weight: 44
     lambda: |-
       if (!id(energy_loaded))
         return {};
@@ -196,6 +208,9 @@ button:
   - platform: template
     name: "Reset All Energy Counters"
     id: reset_all_energy_counters
+    web_server:
+      sorting_group_id: energy
+      sorting_weight: 50
     icon: mdi:counter
     entity_category: config
     on_press:

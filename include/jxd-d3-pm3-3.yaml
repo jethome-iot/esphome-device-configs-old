@@ -26,22 +26,40 @@ sensor:
       voltage:
         name: "Voltage L1"
         id: voltage_l1
+        web_server:
+          sorting_group_id: phase_l1
+          sorting_weight: 1
         accuracy_decimals: 1
       current:
         name: "Current phase L1"
         id: current_l1
+        web_server:
+          sorting_group_id: phase_l1
+          sorting_weight: 2
       power:
         name: "Active Power L1"
         id: active_power_l1
+        web_server:
+          sorting_group_id: phase_l1
+          sorting_weight: 3
       reactive_power:
         name: "Reactive Power L1"
         id: reactive_power_l1
+        web_server:
+          sorting_group_id: phase_l1
+          sorting_weight: 4
       power_factor:
         name: "Power Factor L1"
         id: power_factor_l1
+        web_server:
+          sorting_group_id: phase_l1
+          sorting_weight: 5
       phase_angle:
         name: "Phase Angle L1"
         id: phase_angle_l1
+        web_server:
+          sorting_group_id: phase_l1
+          sorting_weight: 6
 
       gain_voltage: ${gain_voltage_1}
       gain_ct: ${gain_ct1}
@@ -54,22 +72,40 @@ sensor:
       voltage:
         name: "Voltage L2"
         id: voltage_l2
+        web_server:
+          sorting_group_id: phase_l2
+          sorting_weight: 1
         accuracy_decimals: 1
       current:
         name: "Current phase L2"
         id: current_l2
+        web_server:
+          sorting_group_id: phase_l2
+          sorting_weight: 2
       power:
         name: "Active Power L2"
         id: active_power_l2
+        web_server:
+          sorting_group_id: phase_l2
+          sorting_weight: 3
       reactive_power:
         name: "Reactive Power L2"
         id: reactive_power_l2
+        web_server:
+          sorting_group_id: phase_l2
+          sorting_weight: 4
       power_factor:
         name: "Power Factor L2"
         id: power_factor_l2
+        web_server:
+          sorting_group_id: phase_l2
+          sorting_weight: 5
       phase_angle:
         name: "Phase Angle L2"
         id: phase_angle_l2
+        web_server:
+          sorting_group_id: phase_l2
+          sorting_weight: 6
       gain_voltage: ${gain_voltage_2}
       gain_ct: ${gain_ct2}
       offset_voltage: 0
@@ -81,22 +117,40 @@ sensor:
       voltage:
         name: "Voltage L3"
         id: voltage_l3
+        web_server:
+          sorting_group_id: phase_l3
+          sorting_weight: 1
         accuracy_decimals: 1
       current:
         name: "Current phase L3"
         id: current_l3
+        web_server:
+          sorting_group_id: phase_l3
+          sorting_weight: 2
       power:
         name: "Active Power L3"
         id: active_power_l3
+        web_server:
+          sorting_group_id: phase_l3
+          sorting_weight: 3
       reactive_power:
         name: "Reactive Power L3"
         id: reactive_power_l3
+        web_server:
+          sorting_group_id: phase_l3
+          sorting_weight: 4
       power_factor:
         name: "Power Factor L3"
         id: power_factor_l3
+        web_server:
+          sorting_group_id: phase_l3
+          sorting_weight: 5
       phase_angle:
         name: "Phase Angle L3"
         id: phase_angle_l3
+        web_server:
+          sorting_group_id: phase_l3
+          sorting_weight: 6
       gain_voltage: ${gain_voltage_3}
       gain_ct: ${gain_ct3}
       offset_voltage: 0
@@ -107,9 +161,15 @@ sensor:
     frequency:
       name: "Line Frequency"
       id: line_frequency
+      web_server:
+        sorting_group_id: mains
+        sorting_weight: 1
     chip_temperature:
       name: "ATM90E32 Temperature"
       id: atm90e32_temperature
+      web_server:
+        sorting_group_id: mains
+        sorting_weight: 3
     line_frequency: 50Hz
     current_phases: 3
     gain_pga: 2X
@@ -123,36 +183,66 @@ text_sensor:
       phase_a:
         name: "Phase L1 Status"
         id: phase_status_l1
+        web_server:
+          sorting_group_id: phase_l1
+          sorting_weight: 7
       phase_b:
         name: "Phase L2 Status"
         id: phase_status_l2
+        web_server:
+          sorting_group_id: phase_l2
+          sorting_weight: 7
       phase_c:
         name: "Phase L3 Status"
         id: phase_status_l3
+        web_server:
+          sorting_group_id: phase_l3
+          sorting_weight: 7
     frequency_status:
       name: "Frequency Status"
       id: frequency_status
+      web_server:
+        sorting_group_id: mains
+        sorting_weight: 2
 
 button:
   - platform: atm90e32
     run_gain_calibration:
       name: "Run Gain Calibration"
       id: run_gain_calibration
+      web_server:
+        sorting_group_id: calibration
+        sorting_weight: 11
     clear_gain_calibration:
       name: "Clear Gain Calibration"
       id: clear_gain_calibration
+      web_server:
+        sorting_group_id: calibration
+        sorting_weight: 12
     run_offset_calibration:
       name: "Run Offset Calibration"
       id: run_offset_calibration
+      web_server:
+        sorting_group_id: calibration
+        sorting_weight: 13
     clear_offset_calibration:
       name: "Clear Offset Calibration"
       id: clear_offset_calibration
+      web_server:
+        sorting_group_id: calibration
+        sorting_weight: 14
     run_power_offset_calibration:
       name: "Run Power Offset Calibration"
       id: run_power_offset_calibration
+      web_server:
+        sorting_group_id: calibration
+        sorting_weight: 15
     clear_power_offset_calibration:
       name: "Clear Power Offset Calibration"
       id: clear_power_offset_calibration
+      web_server:
+        sorting_group_id: calibration
+        sorting_weight: 16
 
 number:
   - platform: atm90e32
@@ -160,19 +250,37 @@ number:
       phase_a:
         name: "Phase L1 Ref Voltage"
         id: ref_voltage_l1
+        web_server:
+          sorting_group_id: calibration
+          sorting_weight: 1
       phase_b:
         name: "Phase L2 Ref Voltage"
         id: ref_voltage_l2
+        web_server:
+          sorting_group_id: calibration
+          sorting_weight: 2
       phase_c:
         name: "Phase L3 Ref Voltage"
         id: ref_voltage_l3
+        web_server:
+          sorting_group_id: calibration
+          sorting_weight: 3
     reference_current:
       phase_a:
         name: "Phase L1 Ref Current"
         id: ref_current_l1
+        web_server:
+          sorting_group_id: calibration
+          sorting_weight: 4
       phase_b:
         name: "Phase L2 Ref Current"
         id: ref_current_l2
+        web_server:
+          sorting_group_id: calibration
+          sorting_weight: 5
       phase_c:
         name: "Phase L3 Ref Current"
         id: ref_current_l3
+        web_server:
+          sorting_group_id: calibration
+          sorting_weight: 6

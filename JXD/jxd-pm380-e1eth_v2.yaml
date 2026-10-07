@@ -54,9 +54,30 @@ web_server:
   port: 80
   version: 3
   sorting_groups:
+    - id: phase_l1
+      name: "Phase L1"
+      sorting_weight: 1
+    - id: phase_l2
+      name: "Phase L2"
+      sorting_weight: 2
+    - id: phase_l3
+      name: "Phase L3"
+      sorting_weight: 3
+    - id: mains
+      name: "Mains"
+      sorting_weight: 4
+    - id: energy
+      name: "Energy"
+      sorting_weight: 20
+    - id: calibration
+      name: "Calibration"
+      sorting_weight: 25
+    - id: group_network
+      name: "Network"
+      sorting_weight: 30
     - id: device
-      name: "Device controls"
-      sorting_weight: 10
+      name: "Device"
+      sorting_weight: 40
 
 esp32:
   board: esp32dev
