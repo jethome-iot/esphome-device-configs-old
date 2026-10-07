@@ -1,3 +1,8 @@
+# The main page's link icon, for displays that include jxd-status-icons.yaml.
+# The fallback AP counts as down: the IP line only shows the station address.
+substitutions:
+  link_icon: 'id(wifi_id).is_connected() ? id(icon_wifi) : id(icon_wifi_off)'
+
 wifi:
   id: wifi_id
   ssid: !secret wifi_ssid
@@ -26,7 +31,6 @@ script:
           wifi_ap.set_ssid("${friendly_name}-" + str_snprintf("%02X%02X", 4, mac[4], mac[5]));
           wifi_ap.set_password(str_snprintf("%02x%02x%02x%02x", 8, mac[2], mac[3], mac[4], mac[5]));
           id(wifi_id)->set_ap(wifi_ap);
-
 
 text_sensor:
   - platform: wifi_info

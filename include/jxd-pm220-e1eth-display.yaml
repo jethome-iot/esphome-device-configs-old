@@ -1,6 +1,7 @@
 # Front panel assumed to be the PM380 one (JXD-DISPLAY2 rev 1.0), not checked on PM220.
-# Needs jxd-r6-e1eth-buttons.yaml (joystick), jxd-pm220-e1eth-base.yaml (readings) and
-# jxd-pm220-energy.yaml (counters) in the device config.
+# Needs jxd-r6-e1eth-buttons.yaml (joystick), jxd-pm220-e1eth-base.yaml (readings),
+# jxd-pm220-energy.yaml (counters) and ethernet.yaml or wifi.yaml (link icon)
+# in the device config.
 # On the main page LEFT opens the status page, UP the energy counters, DOWN the channels,
 # RIGHT the clock, CENTER the menu.
 
@@ -33,6 +34,7 @@ packages:
   time_page: !include {file: jxd-r6-time-page.yaml, vars: {display_settings_id: display1}}
   buttons: !include {file: jxd-pm220-e1eth-buttons.yaml, vars: {display_settings_id: display1}}
   display_off: !include {file: display-off.yaml, vars: {display_settings_id: display1}}
+  status_icons: !include jxd-status-icons.yaml
 
 display:
   - platform: ssd1306_i2c
@@ -67,6 +69,11 @@ display:
           // User counter #1; all counters are on the UP page
           const double kwh = id(energy_slot_wh)[0] / 1000.0;
           it.printf(0, y, id(f6x12), "E: %.*f kWh", kwh < 10000 ? 2 : 0, kwh);
+
+          // Network link and Home Assistant icons share the bottom row, right of the energy
+          // reading (84 px at most): centred on the row's cap height, off the screen edge.
+          it.image(88, 45, ${link_icon});
+          it.image(109, 45, ${ha_icon});
 
       - id: blank_page
         lambda: return;

@@ -1,3 +1,7 @@
+# The main page's link icon, for displays that include jxd-status-icons.yaml
+substitutions:
+  link_icon: 'id(ethernet_id).is_connected() ? id(icon_eth) : id(icon_eth_off)'
+
 ethernet:
   id: ethernet_id
   type: LAN8720
