@@ -215,6 +215,5 @@ switch:
     name: "Red led"
     id: red_led
     pin: GPIO2
-    web_server:
-      sorting_group_id: device
-      sorting_weight: 1
+    # The firmware's LED, not a control for HA
+    internal: true
